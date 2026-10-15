@@ -1,0 +1,2397 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sentence Wheel</title>
+    <style>
+      :root {
+        --bg: #0e0f12;
+        --panel: #171a1e;
+        --panel-alt: #101317;
+        --carpet-pattern: url('carpet.png');
+        --card: rgba(255, 255, 255, 0.026);
+        --card-border: rgba(255, 255, 255, 0.09);
+        --text: #f2f4f8;
+        --muted: #bcc5d4;
+        --accent: #d9d9d9;
+        --accent-strong: #b5b5b5;
+        --soft: rgba(255, 255, 255, 0.06);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        height: 100%;
+        font-family: "Lancelot", serif;
+        background-color: var(--bg);
+        color: var(--text);
+      }
+
+      body {
+        display: flex;
+        align-items: stretch;
+        justify-content: center;
+        min-height: 100vh;
+
+      }
+
+      .app {
+        width: 100%;
+        max-width: 1800px;
+        height: 100vh;
+        display: flex;
+        overflow: hidden;
+        background: rgba(10, 11, 15, 0.64);
+      }
+
+      .sentence-panel {
+        flex: 1.8;
+        min-width: 0;
+        position: relative;
+        background: rgba(17, 19, 23, 0.76);
+        border-right: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .sentence-list {
+        height: 100%;
+        overflow: hidden;
+        padding: 18px 18px 20px;
+        position: relative;
+        background: linear-gradient(to bottom, rgba(255,255,255,0.02), rgba(255,255,255,0.00));
+        isolation: isolate;
+      }
+
+      .sentence-list::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background-image: var(--carpet-pattern);
+        background-repeat: repeat;
+        background-position: center center;
+        background-size: 512px 512px;
+        opacity: 0.12;
+        z-index: -1;
+      }
+
+      .sentence-track {
+        will-change: transform;
+        position: relative;
+        z-index: 10;
+      }
+
+      .sentence-item {
+        position: relative;
+        display: block;
+        width: 100%;
+        padding: 14px 16px;
+        margin-bottom: 10px;
+        border: 1px solid transparent;
+        background: rgba(255, 255, 255, 0.02);
+        color: rgba(242, 244, 248, 0.68);
+        font-size: 0.98rem;
+        line-height: 1.55;
+        word-wrap: break-word;
+        overflow-wrap: anywhere;
+        filter: blur(1.6px);
+        transition: color 0.18s ease, opacity 0.18s ease;
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+      }
+
+      .sentence-item::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: repeating-linear-gradient(
+          -45deg,
+          rgba(255, 255, 255, 0.035) 0,
+          rgba(255, 255, 255, 0.035) 1px,
+          transparent 1px,
+          transparent 7px
+        );
+        opacity: 0.55;
+      }
+
+      .category-panel {
+        width: 340px;
+        min-width: 260px;
+        background: rgba(14, 15, 18, 0.78);
+        padding: 26px 18px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .title {
+        margin: 0;
+        font-size: clamp(1.5rem, 1.8vw, 2.2rem);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #fff;
+      }
+
+      .category-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;      
+      min-height: 0;    
+      overflow-y: auto; 
+      scrollbar-width: thin;
+      scrollbar-color: #7a0d0d rgba(255, 255, 255, 0.05); 
+    }
+
+    .category-list::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    .category-list::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .category-list::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, #b60a0a, #5a0606);
+      border-radius: 6px;
+      border: 2px solid rgba(12, 13, 16, 0.92);
+    }
+
+    .category-list::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, #d61111, #7a0d0d);
+    }
+
+      .category-button {
+        width: 100%;
+        padding: 14px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background-color: rgba(22, 18, 28, 0.42);
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px) saturate(1.1);
+        -webkit-backdrop-filter: blur(10px) saturate(1.1);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24), inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+        color: var(--text);
+        text-align: left;
+        font-size: 1.15rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease, filter 0.12s ease;
+      }
+
+      .category-button:hover {
+        background-color: rgba(34, 24, 43, 0.62);
+        background-image: none;
+      }
+
+      .category-button:active,
+      .category-button.pressed {
+        background-color: rgba(18, 15, 23, 0.7);
+        background-image: none;
+        border-color: rgba(255, 255, 255, 0.08);
+        filter: brightness(0.72) saturate(0.8);
+        transform: translateY(1px);
+      }
+
+      .category-button.active {
+        background-color: #5a5a5a;
+        background-image: linear-gradient(135deg, #b60a0a, #5a5a5a);
+        border-color: transparent;
+        color: #fff;
+      }
+
+      .category-button.active:active,
+      .category-button.active.pressed {
+        filter: brightness(0.72) saturate(0.8);
+      }
+
+      .category-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .action-row {
+        margin-top: auto;
+        display: flex;
+        align-items: stretch;
+        gap: 10px;
+      }
+
+      .spin-button {
+        flex: 1;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: var(--panel-alt);
+        color: var(--text);
+        padding: 16px 18px;
+        font-size: 0.95rem;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease, filter 0.12s ease;
+      }
+
+      .spin-button:hover {
+        background: #171b21;
+      }
+
+      .spin-button:active,
+      .spin-button.pressed {
+        background: #0c0e11;
+        border-color: rgba(255, 255, 255, 0.12);
+        filter: brightness(0.72) saturate(0.8);
+        transform: translateY(1px);
+      }
+
+      .spin-button:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+
+      .history-button {
+
+        width: clamp(52px, 6vw, 76px);
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: var(--panel-alt);
+        aspect-ratio: 1;
+        padding: 0;
+        overflow: hidden;
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease, filter 0.12s ease;
+      }
+
+      .history-button:hover {
+        background: #171b21;
+      }
+
+      .history-button:active,
+      .history-button.pressed {
+        background: #0c0e11;
+        border-color: rgba(255, 255, 255, 0.12);
+        filter: brightness(0.72) saturate(0.8);
+        transform: translateY(1px);
+      }
+
+      .history-button:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+
+      .history-button-icon {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: fill;
+        pointer-events: none;
+        user-select: none;
+      }
+
+      .history-button:active .history-button-icon,
+      .history-button.pressed .history-button-icon {
+        filter: brightness(0.7) saturate(0.8);
+      }
+
+      .history-button.is-animating .history-button-icon {
+        transform: scale(1.04);
+      }
+
+      .winner-overlay,
+      .history-overlay,
+      .afk-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s ease, visibility 0.2s ease;
+        z-index: 201;
+      }
+
+      .winner-overlay.visible,
+      .history-overlay.visible,
+      .afk-overlay.visible {
+        opacity: 1;
+        visibility: visible;
+      }
+
+     
+      .ghost-overlay {
+        position: absolute; 
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        pointer-events: none;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(70px);
+        transition: opacity 0.5s ease-in, transform 0.5s cubic-bezier(0.5, 0, 1, 1),
+          visibility 0s linear 0.5s;
+        z-index: 1; 
+      }
+
+      .ghost-overlay.visible {
+        opacity: 0.85;
+        visibility: visible;
+        transform: translateY(0);
+        transition: opacity 0.2s ease-out, transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+          visibility 0s linear 0s;
+      }
+
+  
+      .ghost-viewport {
+        position: relative;
+        overflow: hidden;
+        width: min(58vw, 480px);
+        height: calc(100% - clamp(20px, 4vh, 40px));
+        margin-top: clamp(20px, 4vh, 40px);
+      }
+
+      .ghost-img {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        object-fit: cover;
+        
+        object-position: 100% 50%;
+        transform: translate(-50%, -50%) rotate(-90deg);
+        transform-origin: center center;
+        will-change: transform;
+        user-select: none;
+        -webkit-user-drag: none;
+       
+      }
+
+      @media (max-width: 900px) {
+        .ghost-viewport {
+          width: min(78vw, 420px);
+        }
+      }
+
+      .winner-card {
+        position: relative;
+        width: min(760px, 90vw);
+        background: rgba(12, 13, 16, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 30px 26px;
+        text-align: center;
+        overflow: hidden;
+        isolation: isolate;
+      }
+
+
+        .winner-card::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: var(--rose-pattern, url('Maxblonda/whiterose.png')) center center / cover no-repeat;
+          opacity: 0.20;
+          z-index: 0;
+          pointer-events: none;
+}
+          :root {
+            --rose-pattern: url('Maxblonda/whiterose.png');
+          }
+
+
+      .winner-card > * {
+        position: relative;
+        z-index: 1;
+      }
+
+      .history-card {
+        width: min(760px, 90vw);
+        max-height: 80vh;
+        overflow-y: auto;
+        background: rgba(12, 13, 16, 0.92);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 30px 26px;
+        text-align: left;
+        scrollbar-width: thin;
+        scrollbar-color: #7a0d0d rgba(255, 255, 255, 0.05);
+      }
+
+      .history-card::-webkit-scrollbar {
+        width: 10px;
+      }
+
+      .history-card::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .history-card::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #b60a0a, #5a0606);
+        border-radius: 6px;
+        border: 2px solid rgba(12, 13, 16, 0.92);
+      }
+
+      .history-card::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, #d61111, #7a0d0d);
+      }
+
+      .history-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .clear-history-button {
+        background: transparent;
+        border: 1px solid rgba(182, 10, 10, 0.45);
+        color: #ff6b6b;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 7px 12px;
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease, filter 0.12s ease, transform 0.12s ease;
+      }
+
+      .clear-history-button:hover {
+        background: rgba(182, 10, 10, 0.16);
+        border-color: rgba(182, 10, 10, 0.8);
+      }
+
+      .clear-history-button:active,
+      .clear-history-button.pressed {
+        background: rgba(182, 10, 10, 0.08);
+        border-color: rgba(182, 10, 10, 0.75);
+        color: #d75f5f;
+        filter: brightness(0.72) saturate(0.8);
+        transform: translateY(1px);
+      }
+
+      .clear-history-button:disabled {
+        border-color: rgba(120, 120, 120, 0.65);
+        background: rgba(90, 90, 90, 0.18);
+        color: rgba(200, 200, 200, 0.8);
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
+
+      .clear-history-button:disabled:hover {
+        background: rgba(90, 90, 90, 0.18);
+        border-color: rgba(120, 120, 120, 0.65);
+      }
+
+      .history-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 14px;
+      }
+
+      .history-entry {
+        display: flex;
+        flex-direction: column;
+        padding-bottom: 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .history-entry-top {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 18px;
+      }
+
+      .history-entry-text {
+        color: #f7f9ff;
+        line-height: 1.5;
+        user-select: none;
+      }
+
+      .history-entry-meta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+      }
+
+      .spoiler-button {
+        flex-shrink: 0;
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        color: var(--text);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 5px 10px;
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease, filter 0.12s ease, transform 0.12s ease;
+      }
+
+      .spoiler-button:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .spoiler-button:active,
+      .spoiler-button.pressed {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: rgba(255, 255, 255, 0.18);
+        color: rgba(242, 244, 248, 0.9);
+        filter: brightness(0.72) saturate(0.8);
+        transform: translateY(1px);
+      }
+
+      .history-entry-date {
+        flex-shrink: 0;
+        color: var(--muted);
+        font-size: 0.85rem;
+        white-space: nowrap;
+      }
+
+      .history-entry-origin {
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+        margin-top: 0;
+        color: #9a9a9a;
+        font-size: 0.85rem;
+        font-style: italic;
+        line-height: 1.5;
+        user-select: none;
+        transition: max-height 0.25s ease, opacity 0.2s ease, margin-top 0.25s ease;
+      }
+
+      .history-entry-origin.visible {
+        max-height: 200px;
+        opacity: 1;
+        margin-top: 8px;
+      }
+
+      .history-empty {
+        color: var(--muted);
+        margin: 0;
+      }
+
+      .winner-label {
+        display: inline-block;
+        margin-bottom: 12px;
+        font-size: 0.72rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .winner-text {
+        margin: 0;
+        font-size: clamp(1.25rem, 2vw, 2.2rem);
+        line-height: 1.55;
+        color: #f7f9ff;
+        word-wrap: break-word;
+        overflow-wrap: anywhere;
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+      }
+
+      @media (max-width: 900px) {
+        .app {
+          flex-direction: column;
+          height: auto;
+          min-height: 100vh;
+        }
+
+        .sentence-panel {
+          min-height: 58vh;
+          border-right: none;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .category-panel {
+          width: 100%;
+          min-width: 0;
+          max-height: 46vh;
+        }
+
+      }
+
+    
+      .afk-card {
+        position: relative;
+        width: min(560px, 90vw);
+        background: rgba(12, 13, 16, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 26px 24px;
+        text-align: center;
+      }
+
+      .afk-text {
+        margin: 0;
+        font-size: clamp(1.05rem, 1.6vw, 1.6rem);
+        line-height: 1.5;
+        color: #f7f9ff;
+        word-wrap: break-word;
+        overflow-wrap: anywhere;
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <main class="sentence-panel">
+        <div class="sentence-list" id="sentenceList" aria-live="polite">
+          <div class="sentence-track" id="sentenceTrack"></div>
+
+          
+          <div class="ghost-overlay" id="ghostOverlay" aria-hidden="true">
+            <div class="ghost-viewport" id="ghostViewport">
+              <img src="watcher/frame-0.png" alt="" class="ghost-img" id="ghostImg">
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <aside class="category-panel">
+        <h1 class="title">Sentences</h1>
+        <div class="category-list" id="categoryList"></div>
+        <div class="action-row">
+          <button class="spin-button" id="spinButton" type="button">LETS GO GAMBLING</button>
+          <button class="history-button" id="historyButton" type="button" aria-label="View your spin history">
+            <img src="evilflower.png" alt="" class="history-button-icon" id="historyButtonIcon">
+          </button>
+        </div>
+      </aside>
+    </div>
+
+    <div class="winner-overlay" id="winnerOverlay" aria-live="assertive">
+      <div class="winner-card">
+        <span class="winner-label">The Ancients have spoken</span>
+        <p class="winner-text" id="winnerText"></p>
+      </div>
+    </div>
+
+    <div class="afk-overlay" id="afkOverlay" role="status" aria-live="polite">
+      <div class="afk-card">
+        <span class="winner-label">Still there?</span>
+        <p class="afk-text" id="afkText"></p>
+      </div>
+    </div>
+
+    <div class="history-overlay" id="historyOverlay" aria-live="polite">
+      <div class="history-card">
+        <div class="history-header">
+          <span class="winner-label">History</span>
+          <button class="clear-history-button" id="clearHistoryButton" type="button">Clear History</button>
+        </div>
+        <div class="history-list" id="historyList"></div>
+      </div>
+    </div>
+
+    <script>
+      const categories = {
+        "Don\'t Starve": [
+          { text: 'I\'ve a habit of destroying beautiful things, haven\'t I?', origin: 'Maxwell examining petals, DS' },
+          { text: 'Charlie? It\'s me! Maxwell!', origin: 'Maxwell announcing darkness approach, DS' },
+          { text: 'Ow! Charlie, that hurt!', origin: 'Maxwell announcing darkness attack, DS' },
+          { text: 'I\'m so sorry Charlie.', origin: 'Maxwell examining Codex Umbra, DS' },
+          { text: 'Just what are you up to now, Charlie?', origin: 'Maxwell unimplemented quote, DS' },
+          { text: 'That will keep Charlie away for now.', origin: 'Maxwell examining high fire, DS' },
+          { text: 'It keeps Charlie at bay.', origin: 'Maxwell examining torch, DS' },
+          { text: 'It\'ll be dark soon. Charlie will be waking up.', origin: 'Maxwell\'s dusk announce, DS' },
+          { text: 'Every breastpocket needs a fresh rose.', origin: 'Maxwell examining the Hamlet farm store, DS' },
+          { text: 'I prefer roses.', origin: 'Maxwell examining orchid plantholder, DS' },
+          { text: 'It\'s no rose.', origin: 'Maxwell examining exotic flower, DS' },
+          { text: 'I do still prefer roses.', origin: 'Maxwell examining magic flower, DS' },
+          { text: 'It\'s dark! I can\'t see!', origin: 'Maxwell announcing entering darkness, DS' },
+          { text: 'A little light in the dark.', origin: 'Maxwell examining tar lamp, DS' },
+          { text: 'I prefer blooms of a darker shade.', origin: 'Maxwell examining lotus flower, DS' },
+          { text: 'I\'ll have to get my roses elsewhere.', origin: 'Maxwell examining Hamlet farm store burning, DS' },
+          { text: 'She tends to the flowers.', origin: 'Maxwell examining florist pig, DS' },
+          { text: 'its beauty has been snuffed out forever.', origin: 'Maxwell examining dead peagawk, DS' },
+          { text: 'A gal after my own heart. / I hope you have nightmares.', origin: 'Maxwell examining Erudite/Erudite asleep, DS' },
+          { text: 'It\'s more pretty than dapper.', origin: 'Maxwell examining pretty parasol, DS' },
+          { text: 'All things are doomed in time.', origin: 'Maxwell examining burnt sunken boat, DS' },
+          { text: 'Take anything you want.', origin: 'Maxwell examining Bearger, DS' },
+          { text: 'Don\'t think you\'ll be able to escape that easily.', origin: 'Maxwell examining Webber\'s skull, DS' },
+          { text: 'If only the world had a single neck.', origin: 'Maxwell examining razor, DS' },
+          { text: 'It\'s like showing affection, without actually touching it.', origin: 'Maxwell examining brush, DS' },
+          { text: 'You\'ll still be in there when you wake up.', origin: 'Maxwell examining bird in cage, asleep, DS' },
+          { text: 'Power can do amazing things when it\'s funneled through the right channels.', origin: 'Maxwell examining telelocator staff, DS' },
+          { text: 'The heart of the city is still.', origin: 'Maxwell examining thulecite medallion min state, DS' },
+          { text: 'I am filled with the irrational urge to stomp upon it.', origin: 'Maxwell examining flower, DS' },
+          { text: 'I like that flower.', origin: 'Maxwell examining evil flower, DS' },
+          { text: 'There\'s a story behind that...', origin: 'Maxwell examining touch stone, DS' },
+          { text: 'Where are their gods now?', origin: 'Maxwell examining ancient pseudoscience station, DS' },
+          { text: 'It\'s almost like he\'s still alive.', origin: 'Maxwell examining ancient guardian chest, DS' },
+          { text: 'It reminds me of my old act.', origin: 'Maxwell examining bunnyman, DS' },
+          { text: 'Shhhh... My pretty.', origin: 'Maxwell examining held crow, DS' },
+          { text: 'Black is the color of sleep.', origin: 'Maxwell examining jet feather, DS' },
+          { text: 'Grey is the color of pain.', origin: 'Maxwell examining azure feather, DS' },
+          { text: 'Don\'t worry, rabbit. Everything is under control.', origin: 'Maxwell examining held rabbit, DS' },
+          { text: 'How pretty. / I could squish them if I wanted to.', origin: 'Maxwell examining fireflies/held fireflies, DS' },
+          { text: 'Maybe I\'ll just get out of her way.', origin: 'Maxwell examining spider queen, DS' },
+          { text: 'I\'m sorry I had to do that, old friend.', origin: 'Maxwell examining guardian\'s horn, DS' },
+          { text: 'Better her than me.', origin: 'Maxwell examining female character on nightmare throne, DS' },
+          { text: 'Freedom, at last!', origin: 'Maxwell announcing Adventure Mode beat, DS' },
+          { text: 'I don\'t think she\'d take kindly to that.', origin: 'Maxwell announcing can\'t shave beefalo, DS' },
+          { text: 'I still look dapper, right? As if I need to check.', origin: 'Maxwell\'s unimplemented self inspect, DS' },
+          { text: 'Truthfully I was always a hack.', origin: 'Maxwell examining machete, DS' },
+          { text: 'Beautiful on the outside, destructive on the inside.', origin: 'Maxwell examining howling conch, DS' },
+          { text: 'We are all trapped, in one way or another.', origin: 'Maxwell examining Woodlegs\' cage, DS' },
+          { text: 'I\'ll be taking that blood back, thank you.', origin: 'Maxwell examining yellow mosquito sack, DS' },
+          { text: 'It\'s not a question of if I will conquer it, but when.', origin: 'Maxwell examining sea hound, DS' },
+          { text: 'Surrender to me.', origin: 'Maxwell examining blue whale, DS' },
+          { text: 'You will bow to me.', origin: 'Maxwell examining Quacken, DS' },
+          { text: 'Not something a gentleman handles without gloves.', origin: 'Maxwell examining eye of the Tiger Shark, DS' },
+          { text: 'I like it better dead.', origin: 'Maxwell examining dead jellyfish, DS' },
+          { text: 'The inside is filthy.', origin: 'Maxwell examining tarnished crown, DS' },
+          { text: 'My vessel is sustaining damage.', origin: 'Maxwell announcing boat durability loss, DS' },
+          { text: 'I hope you are ready.', origin: 'Maxwell\'s removed seaworthy quote, DS' },
+          { text: 'Which unfortunate soul was that?', origin: 'Maxwell examining crime rug, DS' },
+          { text: 'Still grotesque.', origin: 'Maxwell examining sleeping mant, DS' },
+          { text: 'Just useful enough to keep around.', origin: 'Maxwell examining Ro Bin, DS' },
+          { text: 'Ah, metamorphosis...', origin: 'Maxwell examining glowfly cocoon, DS' },
+          { text: 'I was meant to be king.', origin: 'Maxwell examining royal crown, DS' },
+          { text: 'A potent fragment of a shadowy figure.', origin: 'Maxwell examining dark tatters, DS' },
+          { text: 'Destructive. I like it.', origin: 'Maxwell examining executive hammer, DS' },
+          { text: 'I AM SUPERIOR!', origin: 'Maxwell announcing living artifact put on, DS' },
+          { text: 'That\'ll teach it to not be me.', origin: 'Maxwell examining mined Glommer\'s statue, DS' },
+          { text: 'The master becomes the student.', origin: 'Maxwell examining player\'s skeleton, DS' },
+          { text: 'Hey, that\'s not a statue of me!', origin: 'Maxwell examining Glommer\'s statue, DS' },
+          { text: 'Looking good!', origin: 'Maxwell examining NPC Maxwell, DS' },
+          { text: 'A gentleman\'s weapon.', origin: 'Maxwell examining cutlass supreme, DS' },
+          { text: 'I found that wholly unenjoyable. I swear.', origin: 'Maxwell examining sandcastle, DS' },
+          { text: 'I may have overdone it.', origin: 'Maxwell examining buoyant chiminea at max fuel, DS' },
+          { text: 'It can\'t hurt anyone anymore.', origin: 'Maxwell examining palm tree sapling, DS' },
+          { text: 'Quite uncouth.', origin: 'Maxwell examining dragoon saliva, DS' },
+          { text: 'Hearts only bring pain anyway.', origin: 'Maxwell examining dragoon heart, DS' },
+          { text: 'Ah, I do enjoy the finer things.', origin: 'Maxwell examining lobster bisque, DS' },
+          { text: 'Exactly what it looks like. Err... What does it look like?', origin: 'Maxwell examining sextant, DS' },
+          { text: 'I am consumed by the abyss!', origin: 'Maxwell announcing map border crossing, DS' },
+          { text: 'There\'s no need for such an outburst.', origin: 'Maxwell announcing volcano eruption, DS' },
+          { text: 'Do I dare play with more forces beyond my control?', origin: 'Maxwell examining active volcano altar, DS' },
+          { text: 'Is this amusing?', origin: 'Maxwell examining pirate hat, DS' },
+          { text: '"It\'s working its way down."', origin: 'Maxwell examining sinking trawl net, DS' },
+          { text: 'It will hold off my vessel\'s inevitable decay.', origin: 'Maxwell examining boat repair kit, DS' },
+          { text: 'Goodness. It\'s been awhile since I played.', origin: 'Maxwell examining dripple pipes, DS' },
+          { text: 'I won\'t be using it any longer.', origin: 'Maxwell examining burnt meat effigy, DS' },
+          { text: 'Protects my most important part.', origin: 'Maxwell examining pith hat, DS' },
+          { text: 'Someone will pay for that.', origin: 'Maxwell examining burnt slanty shanty, DS' },
+          { text: 'Essential when dealing with... fluids.', origin: 'Maxwell examining rubbermat rug, DS' },
+          { text: 'That was simply undignified.', origin: 'Maxwell examining picked dung pile, DS' },
+          { text: 'Don\'t make me do something I\'ll regret.', origin: 'Maxwell examining rabid pog, DS' },
+          { text: 'Am I supposed to be intimidated?', origin: 'Maxwell examining royal palace guard, DS' },
+          { text: 'What a delightful color.', origin: 'Maxwell examining obsidian, DS' },
+          { text: 'Size truly doesn\'t matter!', origin: 'Maxwell examining blue whale carcass, DS' },
+          { text: 'We meet again.', origin: 'Maxwell examining white whale, DS' },
+          { text: 'Say pal, you don\'t look so good...', origin: 'you already know where this is from' },
+        ],
+
+        "Don't Starve together": [
+          { text: 'Charlie always complained about being cold. Sigh.', origin: 'Maxwell examining fire nettle tea, DST' },
+          { text: 'Must everything be about my shortcomings?', origin: 'Maxwell examining queenly figure, DST' },
+          { text: 'The show must go on.', origin: 'Maxwell examining Codex Umbra, DST' },
+          { text: 'Are you prepared for what you\'ll find?', origin: 'Maxwell examining rose-colored glasses, DST' },
+          { text: 'My... favorite... she remembered.', origin: 'Maxwell examining heavenly eggnog, DST' },
+          { text: 'Starting to feel left out?', origin: 'Maxwell examining Charlie\'s carrat, DST' },
+          { text: 'This is wrong.', origin: 'Maxwell examining rose, DST' },
+          { text: 'Always did have a flair for the dramatic...', origin: 'Maxwell examining florid postern, DST' },
+          { text: 'She\'s still in there somewhere. I know it.', origin: 'Maxwell examining comedy statue, DST' },
+          { text: 'Her tragedy does not define her.', origin: 'Maxwell examining tragedy statue, DST' },
+          { text: 'Needs something. Perhaps some long-stemmed roses...', origin: 'Maxwell examining vase statue, DST' },
+          { text: 'Just like the old days.', origin: 'Maxwell examining stage, DST' },
+          { text: 'Misdirection, the oldest trick in the book. Well played, Charlie.', origin: 'Maxwell examining playbill, DST' },
+          { text: 'I think she\'s enjoying this a bit too much.', origin: 'Maxwell examining the enchanted doll, DST' },
+          { text: 'I suppose it\'s best to keep up appearances...', origin: 'Maxwell announcing darkness approach, DST' },
+          { text: 'Ow! Be gentle, Charlie!', origin: 'Maxwell announcing darkness attack, DST' },
+          { text: 'They\'re smaller than I remember... going soft on us, Charlie?', origin: 'Maxwell examining varglet, DST' },
+          { text: 'Curious. It smells like roses.', origin: 'Maxwell examining shadow thurible, DST' },
+          { text: 'Charlie...', origin: 'Maxwell examining Charlie NPC, DST' },
+          { text: 'I\'ll... see to it.', origin: 'Maxwell examining beckoning hand, DST' },
+          { text: 'Charlie was the only one who ever kept me in check.', origin: 'Maxwell examining white/black bishop, DST' },
+          { text: 'How very dramatic.', origin: 'Maxwell examining non-king play masks, DST' },
+          { text: 'It seems the costumes are provided.', origin: 'Maxwell examining non-king play costumes, DST' },
+          { text: 'I think that one will fit me nicely.', origin: 'Maxwell examining king costume, DST' },
+          { text: 'It seems silly now...', origin: 'Maxwell examining Maxwell statue, DST' },
+          { text: 'Darkness is never far from my mind.', origin: 'Maxwell examining dreadstone helmet, DST' },
+          { text: 'That smell... both nostalgic and terrifying!', origin: 'Maxwell announcing darkness warn, DST' },
+          { text: 'Who\'s afraid of the dark?', origin: 'table lamp, DST' },
+          { text: 'What was wrong with my carpet?', origin: 'Maxwell examining lush carpet, DST' },
+          { text: 'Darkness is an often underrated accessory.', origin: 'Maxwell examining void cowl, DST' },
+          { text: 'Stop attacking my mind!', origin: 'Maxwell examining Sisturn with dark petals, DST' },
+          { text: 'Here we go again. Dark magics are returning. The power\'s growing.', origin: 'Maxwell examining Atrium destabilization, DST' },
+          { text: 'I wonder if she knows about this...', origin: 'Maxwell examining pure brilliance, DST' },
+          { text: 'If only I stuck with these.', origin: 'Maxwell examining deck of cards, DST' },
+          { text: 'She has no future ahead of her. A shame.', origin: 'Maxwell examining Billy, DST' },
+          { text: 'Hmph. I hope she appreciates this.', origin: 'Maxwell examining Pearl\'s light post, DST' },
+          { text: 'Does she really need a statue?', origin: 'Maxwell examining Bee Queen figure, DST' },
+          { text: 'Always keep things close to the chest, right pal?', origin: 'Maxwell examining Ancient Guardian figure, DST' },
+          { text: 'She doesn\'t understand the full extent of the power she\'s toying with.', origin: 'Maxwell examining time pieces, DST' },
+          { text: 'She looks a little bossy.', origin: 'Maxwell examining princess mask, DST' },
+          { text: 'I hope she stays dead.', origin: 'Maxwell examining spider queen corpse, DST' },
+          { text: 'She\'s ignoring me... the nerve!', origin: 'Maxwell announcing failed moon quay queen offering, DST' },
+          { text: 'Now she\'s just showing off.', origin: 'Maxwell examining Lux Aeterna Redux and Commander\'s Helm, DST' },
+          { text: 'Let me know your wishes, and I will oblige.', origin: 'Maxwell examining celestial altar idol, DST' },
+          { text: 'Some cracks can\'t be mended.', origin: 'Maxwell examining broken shell, DST' },
+          { text: 'A pulse of malice and betrayal beats within.', origin: 'Maxwell examining shadow atrium, DST' },
+          { text: 'Say, pal, I don\'t look so good...', origin: 'Maxwell despawning at celestial portal, DST' },
+          { text: 'I had to try.', origin: 'Maxwell failing Abigail revival, DST' },
+          { text: 'Ugh, are you going to follow me everywhere?', origin: 'Maxwell examining security pulse follower, DST' },
+          { text: 'I feel protected by an unseen force.', origin: 'Maxwell announcing garlic powder buff, DST' },
+          { text: 'With my luck it\'ll lead me to my doom.', origin: 'Maxwell examining waymark compass leading, DST' },
+          { text: 'If the ground displeases me, I\'ll pull it up by the roots.', origin: 'Maxwell examining turf-raiser helm, DST' },
+          { text: 'Every lovely flower must one day wilt.', origin: 'Maxwell examining wilted flower in end table, DST' },
+          { text: 'Enjoy your moment while it last...', origin: 'Maxwell examining fish scale with heavy fish, DST' },
+          { text: 'If only life were that simple.', origin: 'Maxwell examining empty frame, DST' },
+          { text: 'Good. You sit. Forever.', origin: 'Maxwell examining occupied chair, DST' },
+          { text: 'Wrap yourself in the nightmare. Embrace it.', origin: 'Maxwell examining night armor, DST' },
+          { text: 'Presto change-o! Ahem... old habit.', origin: 'Maxwell examining clean sweeper, DST' },
+          { text: 'The magic beckons!', origin: 'Maxwell examining active lazy deserter, DST' },
+          { text: 'I always considered myself the peacock of people.', origin: 'Maxwell examining feather hat, DST' },
+          { text: 'Some things can be repaired.', origin: 'Maxwell examining void repair kit, DST' },
+          { text: 'I\'m picking up notes of terror, with a hint of dread.', origin: 'Maxwell examining embalming spritz, DST' },
+          { text: 'Just like old times.', origin: 'Maxwell examining Broodling, DST' },
+          { text: 'This seems cruel.', origin: 'Maxwell examining hornucopia sculpture, DST' },
+          { text: 'The most troublesome pair I\'ve ever seen.', origin: 'Maxwell examining Twins of Terror figure, DST' },
+          { text: 'Want to see a cool trick? I just need a volunteer...', origin: 'Maxwell examining flash freeze staff, DST' },
+          { text: 'It makes me a little nostalgic.', origin: 'Maxwell examining held inactive bernie, DST' },
+          { text: 'The show\'s over.', origin: 'Maxwell examining burnt mighty gym, DST' },
+          { text: 'History repeats itself.', origin: 'Maxwell examining burnt bookcase, DST' },
+          { text: 'I haven\'t had a real sleep in... ages.', origin: 'Maxwell examining Sleepytime Stories, DST' },
+          { text: 'Taking some inspiration from the Codex, are we? I\'m flattered.', origin: 'Maxwell examining Lux Aeterna, DST' },
+          { text: 'How sickeningly endearing.', origin: 'Maxwell examining dangler/spitter/nurse switcherdoodle, DST' },
+          { text: 'Magic isn\'t so easy, is it?', origin: 'Maxwell examining G.E.M.erator out of fuel, DST' },
+          { text: 'He\'s a soul sucker, that one.', origin: 'Maxwell examining soul jar, DST' },
+          { text: 'Careful, madam. I know where this trail ultimately leaDS.', origin: 'Maxwell examining ageless/second change/rift watch, DST' },
+          { text: 'How the tables have turned, worm.', origin: 'Maxwell examining jelly worm, DST' },
+          { text: 'You are all ants in my eyes already.', origin: 'Maxwell examining binoculars, DST' },
+          { text: 'Takes away the horrors. But who would want that?', origin: 'Maxwell examining fear reducing potion, DST' },
+          { text: 'End of the line, pal.', origin: 'Maxwell examining finish line kit, DST' },
+          { text: 'My choice has been made. No going back.', origin: 'Maxwell announcing failed beefalo choice attempt, DST' },
+          { text: 'This animal commands respect through violence.', origin: 'Maxwell examining catcoon figure, DST' },
+          { text: 'Fine! Begone! The Great Maxwell doesn\'t need help for a simple child\'s game.', origin: 'Maxwell announcing ticoon abandonment, DST' },
+          { text: 'You were not clever enough to best the great Maxwell!', origin: 'Maxwell\'s found kitcoon announcement, DST' },
+          { text: 'Care for a gentleman\'s duel?', origin: 'Maxwell examining glove of challenge, DST' },
+          { text: 'If I\'m going to humiliate myself, I can at least do it properly.', origin: 'Maxwell announcing trying to start fight with no pillow, DST' },
+          { text: 'Move along. Show\'s over.', origin: 'Maxwell examining burnt dragonfly shrine, DST' },
+          { text: 'Enjoying the show, pal?', origin: 'Maxwell examining Broodling spectator, DST' },
+          { text: 'A rose huh?', origin: 'Maxwell examining gilded knight\'s chest plate, DST' },
+          { text: 'Make up your mind! Friend or foe?', origin: 'Maxwell examining gilded knight figure, DST' },
+          { text: 'I would never stoop to such things.', origin: 'Maxwell examining pith pike, DST' },
+          { text: 'Allow me to assist. / No need to thank me.', origin: 'Maxwell announcing started/finished revival, DST' },
+          { text: 'That was simply undignified.', origin: 'Maxwell announcing revived state, DST' },
+          { text: 'My bones are naturally fragile, I\'m afraid.', origin: 'Maxwell examining goat milk, DST' },
+          { text: 'So small and obedient. It goes where I direct it.', origin: 'Maxwell examining golf ball, DST' },
+          { text: 'It reminds lesser players where the world ends.', origin: 'Maxwell examining golf course wall, DST' },
+          { text: 'Must you always be in my way?', origin: 'Maxwell examining golf obstacles, DST' },
+          { text: 'Look at you. You\'re useless.', origin: 'Maxwell examining twiggy tree old line, DST' },
+          { text: 'Everyone\'s got problems, pal. / Just what do you have to be upset about?', origin: 'Maxwell examining stressed/very stressed plant, DST' },
+          { text: 'Thank goodness, I thought it was another wretched statue of me.', origin: 'Maxwell examining Glommer\'s statue, DST' },
+          { text: 'The fewer statues the better, I say.', origin: 'Maxwell examining mined Glommer\'s statue, DST' },
+          { text: 'Hmph. Impressive sleight of hand.', origin: 'Maxwell examining stagehand walking, DST' },
+          { text: 'Adapt or perish.', origin: 'Maxwell examining sea bones, DST' },
+          { text: 'Charlie... what are you planning?', origin: 'Maxwell examining nightmare rampart, DST' },
+          { text: 'Foul beast! Know your place!', origin: 'Maxwell examining lavae, DST' },
+          { text: 'May you never wake.', origin: 'Maxwell examining permafrost pengull asleep, DST' },
+          { text: 'You think you can look down on me?', origin: 'Maxwell examining shriek, DST' },
+          { text: 'I\'ll leave a bitter taste in your mouth, pal.', origin: 'Maxwell examining rasp, DST' },
+          { text: 'What are you smiling at, pal?', origin: 'Maxwell examining rictus, DST' },
+          { text: 'You\'ve changed.', origin: 'Maxwell examining possessed mob/possessed other player, DST' },
+          { text: 'Of course you don\'t even know how to stay dead.', origin: 'Maxwell examining merm reviving, DST' },
+          { text: 'It seems you\'ve lost something, pal.', origin: 'Maxwell examining broken horn gnarwail, DST' },
+          { text: 'I\'m sure its delicate appearance is just a ruse for us to let our guard down.', origin: 'Maxwell examining sea weed, DST' },
+          { text: 'It\'s happy with me, and I with it.', origin: 'Maxwell examining extra-adorable lavae happy, DST' },
+          { text: 'I knew I would make a terrible pa-pa.', origin: 'Maxwell examining lavae egg too cold, DST' },
+          { text: 'You thought you could fool me?', origin: 'Maxwell examining held carrat, DST' },
+          { text: 'Stop this ridiculous charade, beast.', origin: 'Maxwell examining neutral treeguard, DST' },
+          { text: 'Not the castle I had in mind for myself.', origin: 'Maxwell examining glass castle, DST' },
+          { text: 'A most tragic and unfitting end.', origin: 'Maxwell examining bone helm, DST' },
+          { text: 'Say pal, why don\'t we try to work this out?', origin: 'Maxwell examining Crab King, DST' },
+          { text: 'Ah. I thought I\'d run out of people to disappoint.', origin: 'Maxwell examining cracked pearl, DST' },
+          { text: 'You wen\'t nosing around places you shouldn\'t have, didn\'t you?', origin: 'Maxwell examining imprisoned nightmare werepig, DST' },
+          { text: 'Say pal, why don\'t we talk this out?', origin: 'Maxwell examining freed nightmare werepig, DST' },
+          { text: 'It\'s... strange to be so trusted.', origin: 'Maxwell examining Pearl\'s pearl, DST' },
+          { text: 'A crown can be a heavy burden...', origin: 'Maxwell examining merm king, DST' },
+          { text: 'Old habits die hard... and so will you!', origin: 'Maxwell announcing murderer Maxwell player, DST' },
+          { text: 'I\'ll have to pay in blood to bring you back,', origin: 'Maxwell examining ghost Maxwell player, DST' },
+          { text: 'I know that look ... What are you up to?', origin: 'Maxwell announcing attacker Maxwell player, DST' },
+          { text: 'A complete and utter fraud...', origin: 'Maxwell examining fake kazoo, DST' },
+          { text: 'Admittedly, it\'s difficult to maintain balance when you\'re on top.', origin: 'Maxwell examining unbalanced top, DST' },
+          { text: 'Not a pawn, but still a minion.', origin: 'Maxwell examining white and black knight, DST' },
+          { text: 'They\'re here to help... I\'m beginning to understand.', origin: 'Maxwell announcing vault shadow hand appearance, DST' },
+          { text: 'I fear I might have underestimated my prey...', origin: 'Maxwell\'s hunt announcement wrong fork, DST' },
+          { text: 'Forgive me if I\'ve lost my taste for music.', origin: 'Maxwell examining creepy forest record, DST' },
+          { text: 'You can\'t escape my villainous grasp!', origin: 'Maxwell examining held lunar moth, DST' },
+          { text: 'I think it would be best to keep my distance.', origin: 'Maxwell examining greater gestalt, DST' },
+          { text: 'I\'m so sorry.', origin: 'Maxwell examining pipspook, DST' },
+          { text: 'Stay back, you abomination!', origin: 'Maxwell examining possessed WX chassis, DST' },
+          { text: 'Are you certain you wish to return to this world?', origin: 'Maxwell examining ghost Wilson player, DST' },
+          { text: 'Let\'s find a heart. I\'ll prepare my incantations.', origin: 'Maxwell examining ghost Wolfgang player, DST' },
+          { text: 'If you\'re going to attack, at least finish the job!', origin: 'Maxwell announcing attacker WX player, DST' },
+          { text: 'Do not start fights you cannot win!', origin: 'Maxwell announcing murderer Wickerbottom player, DST' },
+          { text: 'So ... you\'re a monster after all!', origin: 'Maxwell announcing murderer Webber player, DST' },
+          { text: 'Oh dear, whatever will become of your kingdom now?', origin: 'Maxwell examining ghost wurt player, DST' },
+          { text: 'I do not wish to quarrel!', origin: 'Maxwell announcing attacker walter player, DST' },
+          { text: 'Murderous fiend! I\'ll show you true power!', origin: 'Maxwell announcing murderer wanda player, DST' },
+          { text: 'It\'s high time I put that creature down.', origin: 'Maxwell examining announcing wonkey player, DST' },
+          { text: 'It slithers all the way down.', origin: 'Maxwell examining eel, DST' },
+          { text: 'The product of a very immature magician, perhaps.', origin: 'Maxwell examining bent spork, DST' },
+          { text: 'How could you improve on perfection?', origin: 'Maxwell announcing unable to use wardrobe, DST' },
+          { text: 'I don\'t like sharing.', origin: 'Maxwell announcing occupied craft station, DST' },
+          { text: 'I\'m quite adept at waiting. I\'ve had a lot of practice.', origin: 'Maxwell announcing cannot rummage, DST' },
+          { text: 'I am attacked by my own world!', origin: 'Maxwell announcing final sinkhole warning, DST' },
+          { text: 'I\'m not sure I really want to give this up.', origin: 'telltale heart, DST' },
+          { text: 'It\'s an empty shell of a man.', origin: 'friendly scarecrow, DST' },
+          { text: 'What a well dressed figure!', origin: 'Maxwell examining kingly figure, DST' },
+          { text: 'Tough crowd.', origin: 'Maxwell examining Mocking Birds, DST' },
+          { text: 'It got what it deserved.', origin: 'Maxwell examining withered cave flowers, DST' },
+          { text: 'Was it wise to unleash this upon the world?', origin: 'Maxwell examining Odd Skeleton, DST' },
+          { text: 'Does this entertain you, beast?', origin: 'Maxwell announcing antlion tribute, DST' },
+          { text: 'Someone thinks highly of themselves.', origin: 'Maxwell reacting to other player with bee queen crown line 1, DST' },
+          { text: 'Your “Majesty.”', origin: 'Maxwell reacting to other player with bee queen crown line 2, DST' },
+          { text: 'Your “Royal Highness.”', origin: 'Maxwell reacting to other player with bee queen crown line 3, DST' },
+          { text: 'It\'s deemed me unworthy.', origin: 'Maxwell announcing failed ancient chest combo, DST' },
+          { text: 'I\'m not strong enough for this.', origin: 'Maxwell examining queenly figure in shaking state, unimplemented/removed, DST' },
+          { text: 'She really expects me to... oh why not.', origin: 'Maxwell examining playbill, unimplemented/removed, DST' },
+          { text: 'I hope this makes you happy, Charlie.', origin: 'maxwell examine charlie npc scene 2' },
+          { text: 'Hm. I don\'t mind the new look.', origin: 'maxwell examine blighted rocky boss' },
+          { text: 'Something horrid in there, no doubt.', origin: 'maxwell examine generic big bat cave' },
+          { text: 'It thinks it\'s being clever.', origin: 'maxwell examine shielding rocky boss' },
+          { text: 'Better be worth it…', origin: 'maxwell examine rocky boss organ' },
+          { text: 'I don\'t even want to know, Charlie.', origin: 'maxwell examine bat boss organ' },
+          { text: 'Disgusting. Really, Charlie?', origin: 'maxwell examine worm boss organ' },
+          { text: 'Levitation? Amateurs.', origin: 'maxwell examine floating ritual items' },
+          { text: 'Charlie? Are you still there?', origin: 'maxwell examine charlie boss' },
+          { text: 'H-hey there, pal... Maxwell here. Big fan of, uh... whatever it is you\'re doing.', origin: 'maxwell examine shrouden' },
+          { text: 'That\'s not Charlie…', origin: 'maxwell announcing darkness attack after shadow finale' },
+          { text: 'Ow! What have you done with Charlie!?', origin: 'maxwell announcing darkness attack after shadow finale' },
+         
+        ],
+        "World Generation Sentence Fragments": [
+          { text: 'lovely roses', origin: 'world generation sentence fragment' },
+          { text: 'a touch of magic', origin: 'world generation sentence fragment' },
+          { text: 'terrible darkness', origin: 'world generation sentence fragment' },
+          { text: 'primal instincts', origin: 'world generation sentence fragment' },
+          { text: 'unspeakable things', origin: 'world generation sentence fragment' },
+          { text: 'Maxwell\'s pocket squares', origin: 'world generation sentence fragment' },
+          { text: 'a monarch\'s sorrow', origin: 'world generation sentence fragment' },
+          { text: 'an inescapable nostalgia', origin: 'world generation sentence fragment' },
+          { text: 'gold and marble', origin: 'world generation sentence fragment' },
+          { text: 'thorns', origin: 'world generation sentence fragment' },
+          { text: 'unbreakable bonds', origin: 'world generation sentence fragment' },
+          { text: 'common goals', origin: 'world generation sentence fragment' },
+          { text: 'poignant tragedy', origin: 'world generation sentence fragment' },
+          { text: 'a comforting togetherness', origin: 'world generation sentence fragment' },
+          { text: 'a hint of shadow', origin: 'world generation sentence fragment' },
+          { text: 'souls', origin: 'world generation sentence fragment' },
+          { text: 'a keen sense of despair', origin: 'world generation sentence fragment' },
+          { text: 'a keen sense of desertation', origin: 'world generation sentence fragment' },
+          { text: 'thalassophobia', origin: 'world generation sentence fragment' },
+          { text: 'nyctophobia', origin: 'world generation sentence fragment' },
+          { text: 'death defining adventure', origin: 'world generation sentence fragment' },
+          { text: 'street life', origin: 'world generation sentence fragment' },
+          { text: 'royalty', origin: 'world generation sentence fragment' },
+          { text: 'insinuating', origin: 'world generation sentence fragment' },
+          { text: 'herding', origin: 'world generation sentence fragment' },
+          { text: 'imbuing', origin: 'world generation sentence fragment' },
+          { text: 'redecorating', origin: 'world generation sentence fragment' },
+          { text: 'summoning', origin: 'world generation sentence fragment' },
+          { text: 'enchanting', origin: 'world generation sentence fragment' },
+          { text: 'solving', origin: 'world generation sentence fragment' },
+          { text: 'game theory', origin: 'world generation sentence fragment' },
+        ],
+        "Skin Descriptions": [
+          { text: 'I never was one to shy away from theatrics, or a good suit.', origin: 'Maxwell\'s quote for Hallowed Nights set skin' },
+          { text: 'The poor unsuspecting fool has no idea what\'s coming.', origin: 'Maxwell\'s quote for the Untriumphant set skin' },
+          { text: 'I just need to find my beautiful assistant.', origin: 'Maxwell\'s quote for guest of honor set skin' },
+          { text: 'The thorned rose cannot help but prick. It is its nature.', origin: 'Maxwell\'s quote for roseate set skin' },
+          { text: 'The delightful aroma of mothballs and decay wafts off it.', origin: 'Maxwell\'s Guest of Honor body skin description' },
+          { text: 'A tragic end to a once-dapper three piece suit.', origin: 'Maxwell\'s Survivor body skin description' },
+          { text: 'This look hearkens back to a simpler time. You are missed, Charlie.', origin: 'Maxwell\'s Untriumphant body skin description' },
+          { text: 'People should know better than to grow too close to you.', origin: 'Maxwell\'s Roseate body skin description' },
+          { text: 'When the muscle is stripped away all that remains is a sweet, delicate flower.', origin: 'Wolfgang\'s Roseate body skin description' },
+          { text: 'Wild roses don\'t claim hillsides by being delicate.', origin: 'Winona\'s Roseate body skin description' },
+          { text: 'An elegant dress to wear while keeping the common folk at arm\'s length.', origin: 'Wickerbottom\'s Snowfallen body skin description' },
+          { text: 'The leaves on this tunic never wilt nor die, but neither do they grow.', origin: 'Maxwell\'s Verdant body skin description' },
+          { text: 'Have you tried amputating what ails you?', origin: 'Wilson\'s Victorian body skin description' }, 
+          { text: 'A gentleman\'s overcoat embellished with fine, rare furs.', origin: 'Woodie\'s Victorian body skin description' },
+          { text: 'The perfect outfit for lounging in the drawing room, or putting the upper crust in their place.', origin: 'Wickerbottom\'s Victorian body skin description' },
+          { text: 'Reminiscent of another world, another time…', origin: 'Wurt\'s Victorian body skin description' },
+          { text: 'Even a fool can pass for nobility in this ensemble.', origin: 'Wes\'s Moonbound body skin description' },
+          { text: 'Never sit at the table without an ace up each sleeve.', origin: 'Maxwell\'s Stampeder body skin description' },
+          { text: 'Cold. Lifeless. Perfect.', origin: 'WX\'s Moonbound head skin description' },
+          { text: 'Pugilism is a gentleman\'s sport.', origin: 'Wolfgang\'s Victorian skin description' },
+          { text: 'This once-sweet doll was abandoned by her child and has since become a vessel of bitterness and resentment.', origin: 'Willow\'s Forlorn Doll head skin description' },
+          { text: 'It would be wise not to get on the queen of winter\'s bad side.', origin: 'Wickerbottom\'s Snowfallen head skin description' },
+          { text: 'Now duel for the rose queen\'s amusement.', origin: 'Wickerbottom\'s Roseate head skin description' },
+          { text: 'A refined gentleman, or a wolf in sheep\'s clothing?', origin: 'Woodie\'s Masquerader head skin description' },
+          { text: 'A hopelessly romantic clown.', origin: 'Wes\'s Pierrot head skin description' },
+          { text: 'Before it all went so wrong…', origin: 'Maxwell\'s Untriumphant head skin description' },
+          { text: 'Ladies and gentlemen, a round of applause for our lovely assistant.', origin: 'Maxwell\'s Roseate head skin description' },
+          { text: 'The garb of a blood-sucking monster seems to suit him quite well.', origin: 'Maxwell\'s Vampiric head skin description' },
+          { text: 'Maxwell\'s rage has split him in two.', origin: 'Maxwell\'s Magmatic head skin description' },
+          { text: 'Some hearts never thaw.', origin: 'Maxwell\'s Merrymaker head skin description' },
+          { text: 'Power really changes some people.', origin: 'Maxwell\'s Moonbound head skin description' },
+          { text: 'This melancholic mystery man keeps slinking off to find dark corners to brood in.', origin: 'Maxwell\'s Masquerader head skin description' },
+          { text: 'Maxwell has sacrificed much at the altar of his own aspiration.', origin: 'Maxwell\'s Equinor head skin description' },
+          { text: 'Maxwell makes his own rules.', origin: 'Maxwell\'s Stampeder head skin description' },
+          { text: 'Go to the dark side and be on top of the world.', origin: 'Wigfrid\'s Triumphant head skin description' },
+          { text: 'The rosebuds are tangled in there real good.', origin: 'Webber\'s Roseate head skin description' },
+          { text: 'This handsome devil is on another level... of reality.', origin: 'Wortox\'s Guest of Honor head skin description' },
+          { text: 'Sometimes the last to bloom is the most beautiful flower.', origin: 'Wormwood\'s Roseate head skin description' },
+          { text: 'Why fight an inevitable future?', origin: 'Wanda\'s Triumphant head skin description' },
+          { text: 'The life of a rose garden is cyclical - blossoms wither and fade, then bloom anew.', origin: 'Wanda\'s Roseate skin description' },
+          { text: 'It isn\'t a fancy occasion if you\'re not wearing gloves.', origin: 'Wanda\'s Guest of Honor hand skin description' },
+          { text: 'hands touched by shadows can only spread darkness.', origin: 'Wanda\'s Triumphant hand skin description' },
+          { text: 'Limbs as elegant as the rose from which they grow.', origin: 'Wormwood\'s Roseate hand skin description' },
+          { text: 'Gloved hands tend the finest roses.', origin: 'Warly\'s Roseate hand skin description' },
+          { text: 'Diamonds won\'t keep you warm.', origin: 'Winona\'s Snowfallen hand skin description' },
+          { text: 'Don\'t worry, this won\'t hurt a bit!', origin: 'Wilson\'s Victorian hand skin description' },
+          { text: 'Soft gloves to hold your heartbreak.', origin: 'Wendy\'s Victorian hand skin description' },
+          { text: 'Warm your hands, and maybe even your heart.', origin: 'Wendy\'s Merrymaker hand skin description' },
+          { text: 'Glittery gold beads, procured through questionable means.', origin: 'Wortox\'s Swashbuckler hand skin description' },
+          { text: 'For some reason, nobody wants to hold your hand.', origin: 'Webber\'s Moonbound hand skin description' },
+          { text: 'Will you reach for the light or the darkness?', origin: 'Maxwell\'s Moonbound hand skin description' },
+          { text: 'A curse upon all you touch!', origin: 'WX\'s Ancient hand skin description' },
+          { text: 'Reach for the stars when the night is at its darkest!', origin: 'Winona\'s Roarer hand skin description' },
+          { text: 'A handful of rose petals hides away in each pocket, awaiting a dramatic moment to be tossed in the air.', origin: 'Warly\'s Roseate leg skin description' },
+          { text: 'As his boots crunch through the unsullied snow, he leaves behind the only evidence of his passing; a trail of steady, methodical footprints.', origin: 'Woodie\'s Merrymaker leg skin description' },
+          { text: 'You were never really the down-to-earth type, anyway.', origin: 'Wormwood\'s Moonbound leg skin description' },
+          { text: 'Wrapped up, like the wearer\'s stage career.', origin: 'Maxwell\'s Masquerader leg skin description' },
+          { text: 'They\'re incredibly clean... in fact, they somehow always look brand new.', origin: 'Wanda\'s Guest of Honor feet skin description' },
+          { text: 'Heavy shoes to tread the path of sorrow.', origin: 'Wendy\'s Victorian feet skin description' },
+          { text: 'A storyteller must always stay two steps ahead of their audience.', origin: 'Walter\'s Hallowed Nights feet skin description' },
+          { text: 'The monochromatic stripes go well with any grey areas you might find yourself in.', origin: 'Maxwell\'s Moonbound feet skin description' },
+          { text: 'Do not wander too quietly into the night, or Death may fail to notice you.', origin: 'Wendy\'s Masquerader feet skin description' },
+          { text: 'You always felt more sure-footed standing in front of an audience than mingling with a crowd.', origin: 'Maxwell\'s Masquerader feet skin description' },
+          { text: 'Tread as you will upon hallowed ground.', origin: 'WX\'s ancient feet skin description' },
+          { text: 'Black suits you.', origin: 'Corrupted Cloak skin description' },
+          { text: 'The darkness will protect you.', origin: 'Shadowy Armor skin description' },
+          { text: 'These bones have been waiting a long time for you to wear them.', origin: 'Mythic Bone Armor skin description' },
+          { text: 'Protect yourself with the fanciest old bones.', origin: 'Ornate Bone Armor skin description' },
+          { text: 'Become the most dreaded warrior on the battlefield.', origin: 'Horned Dreadstone Armor skin description' },
+          { text: 'Its heavy load pales in comparison to the weight on your conscience.', origin: 'Hampered Basket skin description' },
+          { text: 'All hearts can be mended with time and care.', origin: 'Clement Life Amulet skin description' },
+          { text: 'Some roses rebloom while others wilt and die.', origin: 'Rosy Red Amulet skin description' },
+          { text: 'If at first you don\'t survive, try, try again.', origin: 'Iterum Amulet skin description' },
+          { text: 'Sometimes you gotta lose it, to find it.', origin: 'Sepulchral/Qualming Amulet skin description' },
+          { text: 'You\'ll get what\'s coming to you.', origin: 'Reaping Amulet skin description' },
+          { text: 'There is always hope.', origin: 'Faint Gleam Amulet skin description' },
+          { text: 'Laurels ought rest on you, not the other way around.', origin: 'Thorned Laurel skin description' },
+          { text: 'Stay warm, honey!', origin: 'Sweet Beemuffs skin description' },
+          { text: 'Sometimes you want to feel like the heroine of a Jane Austen novel.', origin: 'Straw Bonnet skin description' },
+          { text: 'You feel the most comforting sensation that something\'s watching over you.', origin: 'Victorian Eyebrella skin description' },
+          { text: 'BEWARE OF DOG.', origin: 'Warhound Helm skin description' },
+          { text: 'These beautiful blooms have had to fight for survival in the unforgiving wilderness.', origin: 'Wildflower Helm skin description' },
+          { text: 'An otherworldly spectrum of light dances around your head.', origin: 'Last Prisms skin description' },
+          { text: 'Let them try to wrestle this away from you.', origin: 'Ultimate Spear skin description' },
+          { text: 'Alas, we may never know what wondrous creature this wing might have once belonged to.', origin: 'Fantastical Bat skin description' },
+          { text: 'Show them no mercy.', origin: 'Corrupted Blade skin description' },
+          { text: 'Your enemies are usually slain before the curse can take effect. A pity, really.', origin: 'Cursed Sabre skin description' },
+          { text: 'Try not to listen to its whispers…', origin: 'Twisted Dagger skin description' },
+          { text: 'Beauty can be found everywhere, even in blunt force.', origin: 'Nouveau Club skin description' },
+          { text: 'Lacerate with a cursed blade.', origin: 'Gatekeepers\' Club skin description' },
+          { text: 'It\'s full of warm, fuzzy, stinging, and angry feelings.', origin: 'Will You Bee Mine? skin description' },
+          { text: 'Trap any enemies who stop to smell the roses.', origin: 'Rose Thorn Trap skin description' },
+          { text: 'Always fight fire with fire.', origin: 'Flamelash skin description' },
+          { text: 'Do as a shadow and leave no trace behind.', origin: 'Shadowbeam skin description' },
+          { text: 'Swing with love.', origin: 'Heartchet skin description' },
+          { text: 'Just the thing to help bury those pesky feelings.', origin: 'Heart Spade skin description' },
+          { text: 'Wherever you go, she goes.', origin: 'Axe n\' Chain skin description' },
+          { text: 'Lovers love to walk in the rain.', origin: 'Lover\'s Umbrella skin description' },
+          { text: 'April showers bring May flowers.', origin: 'Rosy Posy Parasol skin description' },
+          { text: 'It\'s nice not to be the one getting eaten for a change.', origin: 'Cavernous Spidernet skin description' },
+          { text: 'At first glance this torch appears menacing, but holding it makes you feel quite sad.', origin: 'Tragic Torch skin description' },
+          { text: 'Rekindle an old flame.', origin: 'Vintage Lighter skin description' },
+          { text: 'Some things deserve to be forgotten…', origin: 'Forsaken Lighter skin description' },
+          { text: 'A dread instrument for self-surgery.', origin: 'Crimson-forged Extractor skin description' },
+          { text: 'Somehow, even the light feels gloomy.', origin: 'Gothic Lantern skin description' },
+          { text: 'Let them fear you. They should.', origin: 'Corrupted Cane skin description' },
+          { text: 'A scepter for the king of fools.', origin: 'Fool\'s Marotte skin description' },
+          { text: 'To tread ancient paths, long forgotten.', origin: 'Ancient Cane skin description' },
+          { text: 'A cage even the birds will admire.', origin: 'Nouveau Bird Trap skin description' },
+          { text: 'An exhaustive list of showtimes for upcoming stage performances.', origin: 'Theater Schedule skin description' },
+          { text: 'Will their hot-and-cold forbidden romance last?', origin: 'part of the Mermio and Pigliet skin description' },
+          { text: 'Packed with love and care.', origin: 'Cloth Wrap skin description' },
+          { text: 'A heart, ripped out and offered to another.', origin: 'Stolen Heart skin description' },
+          { text: 'Alas, some daggers through the heart are more literal than others.', origin: 'Daggered Heart skin description' },
+          { text: 'The slings and arrows of fate have taken their toll on this poor, afflicted heart.', origin: 'Cherub\'s Heart skin description' },
+          { text: 'A vibrant flame extracted in crystallized form from a passionate soul.', origin: 'Metamorphosed Flame skin description' },
+          { text: 'A wispy haven for your daydreams.', origin: 'Luxurious Lean-to skin description' },
+          { text: 'Have the World\'s Greatest Dreams.', origin: 'World\'s Greatest Big Top tent skin description' },
+          { text: 'Step inside, and dream of long-forgotten things.', origin: 'Archaic Tent skin description' },
+          { text: 'Love the new look.', origin: 'Lover\'s Wardrobe skin description' },
+          { text: 'Some people would give an arm and a leg for this kind of power.', origin: 'Sorcerer\'s Circle skin description' },
+          { text: 'Almost scarier than just being in the dark.', origin: 'Ornate Night Light skin description' },
+          { text: 'Execute your enemies with exquisite detail.', origin: 'Intricate Turret skin description' },
+          { text: 'What will you do in the name of progress?', origin: 'Experimentation Apparatus skin description' },
+          { text: 'You have the most unnerving feeling that you\'re being watched.', origin: 'Ancient Sigil skin description' },
+          { text: 'Something dark seems to have taken root…', origin: 'Reclaimed Relic skin description' },
+          { text: 'Enjoy practicing the dark arts, in style.', origin: 'Dark Talisman skin description' },
+          { text: 'This evil monstrosity will aid you in bringing horror to the world.', origin: 'Monstrous Horror skin description' },
+          { text: 'Maybe a pretty cage will help the bird come to terms with its imprisonment. Probably not though.', origin: 'Baroque Birdcage skin description' },
+          { text: 'This cage\'s bold design will impress even the bird it imprisons.', origin: 'Gilded Birdcage skin description' },
+          { text: 'Trap birds in a prison of their own making.', origin: 'Macabre Birdcage skin description' },
+          { text: 'Some like it hot, some like it even hotter.', origin: 'Lava Firepit skin description' },
+          { text: 'It evokes the feeling of a cold, gothic cathedral.', origin: 'Gothic Firepit skin description' },
+          { text: 'Despite the heat it provides, you can\'t help but feel a chill run down your spine.', origin: 'Foreboding Furnace skin description' },
+          { text: 'Alas, no heart beats within this hollow chest.', origin: 'Lovely Chest skin description' },
+          { text: 'This devious depository can only be the work of dark magic.', origin: 'Nightmarish Magician\'s Chest skin description' },
+          { text: 'Behold, the power of beauty!', origin: 'Genteel Generator skin description' },
+          { text: 'A brutish display of power.', origin: 'Jagged Generator skin description' },
+          { text: 'The key ingredient is charm.', origin: 'Porcelain Crock Pot skin description' },
+          { text: 'Winning is hard work. You deserve a rest.', origin: 'Cawnival Ribboned Chair skin description' },
+          { text: 'Class over comfort!', origin: 'Wrought Iron/Antique Chair skin description' },
+          { text: 'Not exactly a bed of roses, but it\'ll do.', origin: 'Rosewood Round Table skin description' },
+          { text: 'There\'s a place at this table for everyone... of a certain status.', origin: 'Wrought Iron/Antique Table skin description' },
+          { text: 'A single rose for simplistic beauty.', origin: 'A Singular Vase skin description' },
+          { text: 'Keep your fondest memories front and center.', origin: 'Cozy Frame skin description' },
+          { text: 'Dare to display your dark side.', origin: 'Bewitched Border skin description' },
+          { text: 'Evenings are for remembering.', origin: 'Parlor Border skin description' },
+          { text: 'For those rose-tinted rememberances.', origin: 'Rose Tinted Frame skin description' },
+          { text: 'It was no fairy tale ending.', origin: 'The Fall skin description' },
+          { text: 'Let fluttering butterflies guide you on your path.', origin: 'Fantasmical Path Marker skin description' },
+          { text: 'On Hallowed Nights, the wise ones stay, close to the glow that keeps dark at bay.', origin: 'Jack-o-Lamptern skin description' },
+          { text: 'Decorate with the Shadow Queen\'s favorite flower.', origin: 'Rose Bushel skin description' },
+          { text: 'Rose thorns are nature\'s barbed wire.', origin: 'Rosy Fence skin description' },
+          { text: 'Like a cake, but horrible.', origin: 'Layered Dreadstone Wall skin description' },
+          { text: 'Bad luck. Good luck. Either way it\'s still adorable.', origin: 'Black Kittykit skin description' },
+          { text: 'Memories are not the only things that linger.', origin: 'the Nostalgic Abigail skin description' },
+          { text: 'Death is just a setback.', origin: 'the Persister Abigail skin description' },
+          { text: 'Something dark has taken hold…', origin: 'the Triumphant Abigail skin description' },
+          { text: 'Poor flower, plucked in its prime.', origin: 'the Roseate Abigail skin description' },
+          { text: 'Life is so fragile, like a butterfly\'s wings.', origin: 'the Verdant Abigail skin description' },
+          { text: 'A flower watered by a steady stream of tears.', origin: 'the Mourned Abigail skin description' },
+          { text: 'This flower is always watching.', origin: 'Lureplant costume Abigail skin description' },
+          { text: 'A fanciful look for an old friend.', origin: 'Fairy Glom skin description' },
+          { text: 'Feel like confronting the void? Just look into his eyes!', origin: 'Hollow Gaze Hutch skin description' },
+          { text: 'Beneath that abrasive exterior lies a warm and caring heart.', origin: 'Prickly Pearl skin description' },
+          { text: 'Scan for secrets best left buried.', origin: 'Somber Scanalyzer skin description' },
+          { text: 'It\'s not entitlement if it already belongs to you.', origin: 'Opulent Auto-Grabber skin description' },
+          { text: 'It waits, watching for weakness.', origin: 'Ominous Exploiterator skin description' },
+          { text: 'This otherworldly predator is an equally enticing and menacing shade of pink.', origin: 'Plantera skin description' },
+          { text: 'Was that pillar there before? Have you finally gone mad?', origin: 'Dark Pillar skin description' },
+          { text: 'What could reside in a place so dark and dour?', origin: 'Brooding Den skin description' },
+          { text: 'What an inviting passageway, I\'ll bet it isn\'t even cursed!', origin: 'Fairy Ring skin description' },
+          { text: 'All this fuss, just to return to your gloomy little life.', origin: 'Reanimation Stone skin description' },
+          { text: 'You hunger for darkness, and it hungers for you.', origin: 'Nightshade Wormhole skin description' },
+          { text: 'It\'s inviting you in with a big toothy grin!', origin: 'Snaggletooth Wormhole skin description' },
+          { text: 'Don\'t worry, it\'s probably not carnivorous. Probably.', origin: 'Lureplant Wormhole skin description' },
+      ],
+
+        "Adventure Mode": [
+        { text: 'You\'d think you would have learned your lesson by now.', origin: 'Maxwell, chapter 1 Adventure Mode' },
+        { text: 'Let\'s make a deal. You can stay here. Settle down, even.', origin: 'Maxwell, chapter 3-4 Adventure Mode' },
+        { text: 'All I want in return is a truce.', origin: 'Maxwell, chapter 3-4 Adventure Mode' },
+        { text: 'Well would you look at that, you survived.', origin: 'Maxwell, chapter 2 Adventure Mode' },
+        { text: 'Say pal. / You\'re really pushing your luck.', origin: 'Maxwell, chapter 4 non-two worlds Adventure Mode' },
+        { text: 'Impressive. But you should probably stop while you\'re ahead.', origin: 'Maxwell, chapter 3 non-Two Worlds Adventure Mode' },
+        { text: 'Turn back now, or I may have to resort to drastic measures.', origin: 'Maxwell, chapter 4 non-Two Worlds Adventure Mode' },
+        { text: 'You insolent, pitiful, insignificant ant!', origin: 'Maxwell, chapter 5 Adventure Mode' },
+        { text: 'Do not arouse the wrath of the Great Maxwell!', origin: 'Maxwell, chapter 5 Adventure Mode' },
+        { text: 'You will regret coming any further…', origin: 'Maxwelll, chapter 5 Adventure Mode' },
+        { text: 'Hmm. Let\'s try something a little more challenging, shall we?', origin: 'Maxwell, chapter 1 Adventure Mode' },
+        { text: 'Now don\'t get a big head, you aren\'t the first.', origin: 'Maxwell, unused Adventure Mode lines' },
+        { text: 'Let\'s see what you\'re really made of.', origin: 'Maxwell, unused Adventure Mode lines' },
+        { text: 'I will enjoy inspecting your entrails once the Deerclops is done with you.', origin: 'Maxwell, unused Adventure Mode lines' },
+        { text: 'Must I do everything myself?', origin: 'Maxwell, unused Adventure Mode lines' },
+        { text: 'HOUNDS! DISPOSE OF THIS PEST!', origin: 'Maxwell, unused Adventure Mode lines' },
+        { text: 'Well, this is it.', origin: 'Maxwell, unused Adventure Mode lines' },
+        { text: 'You found me. Now, what are you going to do?', origin: 'Maxwell, unused Adventure Mode lines' },
+        { text: 'Is this what you were expecting?', origin: 'Maxwells final speech, Adventure Mode' },
+        { text: 'Is this how it ends?', origin: 'Maxwells final speech, Adventure Mode' },
+        { text: 'Forgive me if I don\'t get up.', origin: 'Maxwells final speech, Adventure Mode' },
+        { text: 'You\'ve been an interesting plaything, but I\'ve grown tired of this game.', origin: 'Maxwells final speech, Adventure Mode' },
+        { text: 'They\'ll show you terrible, beautiful things.', origin: 'Maxwells final speech, Adventure Mode' },
+        { text: 'I\'ve learned so much since then. I\'ve built so much.', origin: 'Maxwells final speech, Adventure Mode' },
+        { text: 'But even a King is bound to the board.', origin: 'Maxwells final speech, Adventure Mode' },
+        { text: 'You can\'t change the rules of the game.', origin: 'Maxwells final speech, Adventure Mode' },
+        { text: 'They… they just watch. Unless you get too close… Then…', origin: 'Maxwells final speech, Adventure Mode' },
+        { text: 'Well, there\'s a reason I stay so dapper.', origin: 'Maxwells final speech, Adventure Mode' },
+        { text: 'Go on, stay a while. Keep us company.', origin: 'Maxwells final speech, Adventure Mode' },
+        { text: 'It\'s your decision.', origin: 'Maxwells final speech, Adventure Mode' },
+        { text: 'Either way, you\'re just delaying the inevitable.', origin: 'Maxwells final speech, Adventure Mode' },
+        { text: 'I think I\'ve said enough.', origin: 'Maxwells final speech, Adventure Mode' },
+        { text: 'I suppose I deserve that.', origin: 'Maxwell, chapter 5 Adventure Mode' },
+        { text: 'Don\'t you think I\'ve tried that?', origin: 'Maxwell, chapter 5 Adventure Mode' },
+        { text: 'This is the end of the line. We have no escape.', origin: 'Maxwell, chapter 5 Adventure Mode' },
+        { text: 'The throne won\'t allow that. I\'ve tried.', origin: 'Maxwell, chapter 5 Adventure Mode' },
+        { text: 'Time moves differently here.', origin: 'Maxwell, chapter 5 Adventure Mode' },
+        { text: 'Reality is like that, sometimes.', origin: 'Maxwell, chapter 5 Adventure Mode' },
+        { text: 'This may take some time…', origin: 'Maxwell, unimplemented/beta Adventure Mode intro lines' },
+        { text: 'The dew has fallen with a particularly sickening thud this morning…', origin: 'Maxwell, unimplemented/beta Adventure Mode intro lines' },
+        { text: 'Say pal, keep your chin up.', origin: 'part of Maxwell\'s unimplemented/beta Adventure Mode intro lines' },
+        { text: 'Say pal, keep your chin up. / You will probably find it hard to stay dapper.', origin: 'Maxwell, unimplemented/beta Adventure Mode intro lines' },
+        { text: 'I left you a little something… I don\'t think it will help you though.', origin: 'Maxwell, unimplemented/beta Adventure Mode intro lines' },
+        { text: 'You know what I like about nighttime? All the spiders.', origin: 'Maxwell, unimplemented/beta Adventure Mode intro lines' },
+        { text: 'Ah, I am a fool. I had dared to hope.', origin: 'Maxwell, unimplemented/beta Adventure Mode lines' },
+        { text: 'Where would be the sport in that?', origin: 'Maxwell, unimplemented/beta Adventure Mode lines' },
+        { text: 'Who do you think allowed you to make that?', origin: 'Maxwell, unimplemented/beta Adventure Mode lines' },
+                ],
+
+      "Hallowed Valentine":[
+        { text: 'In lands ruled strong by shadow / Not one can trust the night', origin: 'Maxwell\'s story, 2016 hallowed nights comic' },
+        { text: 'So don your chilling costumes / and steel your heart for season\'s fright', origin: 'Maxwell\'s story, 2016 Hallowed Nights comic' },
+        { text: 'They failed to fear the night / Such thoughts did nary cross their head', origin: 'Maxwell\'s story, 2017 Hallowed Nights comic' },
+        { text: 'And so in darkness felt the creeping / Of the shadows toward their bed,', origin: 'Maxwell\'s story, 2017 Hallowed Nights comic' },
+        { text: 'Fingers born of darkest pitch / And claws of blackest shade', origin: 'Maxwell\'s story, 2017 Hallowed Nights comic' },
+        { text: 'Fingers born of darkest pitch / And claws of blackest shade / Grasped tightly ‘round their ankles / And of them a puppet made,', origin: 'Maxwell\'s story, 2017 Hallowed Nights comic' },
+        { text: 'Forever bound by monsters / Strung by strings that never fray,', origin: 'Maxwell\'s story, 2017 Hallowed Nights comic' },
+        { text: 'So heed ye now this lesson / Never lose your fear of night,', origin: 'Maxwell\'s story, 2017 Hallowed Nights comic' },
+        { text: 'Never lose your fear of night, / Lest ye too become a puppet / For the Shadow Queen\'s delight!', origin: 'Maxwell\'s story, 2017 Hallowed Nights comic' },
+        { text: 'My dears, my dears, why do you stay / Bathed in that vulgar light?', origin: 'Charlie\'s story, 2019 Hallowed Nights comic' },
+        { text: 'Would you not rather come and play / With Shadows in the night?', origin: 'Charlie\'s story, 2019 Hallowed Nights comic' },
+        { text: 'I\'ve taught them how to dance for me / Oh, what a show to view!', origin: 'Charlie\'s story, 2019 Hallowed Nights comic' },
+        { text: 'We\'d love you in our audience, A seat\'s saved just for you.', origin: 'Charlie\'s story, 2019 Hallowed Nights comic' },
+        { text: 'My friends, my friends, you look so pale / No need to be afraid.', origin: 'Charlie\'s story, 2019 Hallowed Nights comic' },
+        { text: 'I only want to show you all / My shadows on parade!', origin: 'Charlie\'s story, 2019 Hallowed Nights comic' },
+        { text: 'You know, I too once craved the glow / Of light upon my face,', origin: 'Charlie\'s story, 2019 Hallowed Nights comic' },
+        { text: 'But I have learned since then that light / Does not survive this place.', origin: 'Charlie\'s story, 2019 Hallowed Nights comic' },
+        { text: 'Your existence, a whisper- forgotten, frail-', origin: 'Hallowed Nights 2024 comic' },
+        { text: 'The darkness depends, Draped with despair,', origin: 'Hallowed Nights 2024 comic' },
+        { text: 'Yet in your chest, a SPARK still flickers there.', origin: 'Hallowed Nights 2024 comic' },
+        { text: 'You hear the echoes of laughter long past,', origin: 'Hallowed Nights 2024 comic' },
+        { text: 'Fighting sleep, chasing moments that couldn\'t last.', origin: 'Hallowed Nights 2024 comic' },
+        { text: 'If only for a night, to feel that warmth once more,', origin: 'Hallowed Nights 2024 comic' },
+        { text: 'For when together, the Shadows will fade,', origin: 'Hallowed Nights 2024 comic' },
+        { text: 'And even the lost will find light in the shade.', origin: 'Hallowed Nights 2024 comic' },
+        { text: 'But for some, there is no solace in another,', origin: 'Hallowed Nights 2024 comic' },
+        { text: 'For come too close, your flame they would smother.', origin: 'Hallowed Nights 2024 comic' },
+        { text: 'Though they smile, it\'s a mask they wear to hide, / To obscure the darkness that festers inside.', origin: 'Hallowed Nights 2024 comic' },
+        { text: 'Say pal, would you be [mine]?', origin: 'Maxwell 2016 valentine\'s day card' },
+        { text: 'There\'s magic between us.', origin: 'Maxwell 2017 valentine\'s day card' },
+        { text: 'Nothing could overshadow our love.', origin: 'Maxwell 2018 valentine\'s day card' },
+        { text: 'Ever hunger grows relentless,', origin: 'Charlie, Hallowed Nights comic 2016' },
+        { text: 'When double-cross and foul play, / become so very “every day”', origin: 'Hallowed Nights comic 2018' },
+        { text: 'Such fools, such fools, you make me laugh,', origin: 'Charlie, Hallowed Nights comic 2019' },
+        { text: 'And be glad that you\'ve yet to feel / The Queen of Shadow\'s ire!', origin: 'Charlie, Hallowed Nights comic 2019' },
+      ],
+
+      "Stage play": [
+
+      { text: 'Thank you very much, you are too kind.', origin: 'line 1 of Maxwell\'s soliloquy.' },
+      { text: 'And now, I will pull shadows incarnate from this mysterious tome!', origin: 'line 2 of Maxwell\'s soliloquy.' },
+      { text: 'The show was better with... well, it was better before.', origin: 'line 3 of Maxwell\'s soliloquy.' },
+      { text: 'I wonder how much she really remembers.', origin: 'Maxwell watching act 2 scene 1.' },
+      { text: 'She won\'t like that.', origin: 'Maxwell announcing going off-script during stage play.' },
+      { text: 'Are you having fun?', origin: 'Maxwell examining The Enchanted Doll, unimplemented/removed' },
+      { text: 'Are you so afraid to see your old friend?', origin: 'Doll in act 2 scene 3' },
+      { text: 'Why, it\'s magic, my dear!', origin: 'King in act 1 scene 3 ' },
+      { text: 'And I am no simple “sir”, / but the King of this land!', origin: 'King in act 1 scene 3' },
+      { text: 'How different might things have been, / if I never sought the crown?', origin: 'King\'s soliloquy, lines 1/2' },
+      { text: 'I suppose the world would be a bit brighter.', origin: 'King\'s soliloquy, line 3' },
+      { text: 'What a terrible thought indeed.', origin: 'King\'s soliloquy, line 4' },
+      { text: 'Truth be told, / I\'ve never quite met a porcelain doll / quite so alive before.', origin: 'King in act 1 scene 3' },
+      { text: 'Perhaps we could travel together? / This road is long, and can get quite lonely.', origin: 'King in act 1 scene 3' },
+      { text: 'I would be delighted.', origin: 'King in act 1 scene 3' },
+      { text: 'Not today little doll,', origin: 'King in act 2 scene 1' },
+      { text: 'I\'m a bit under the weather.', origin: 'King in act 2 scene 1' },
+      { text: 'I\'m afraid I can\'t, / there\'s a full moon out tonight!', origin: 'King in act 2 scene 1' },
+      { text: 'Dear me, I couldn\'t possibly!', origin: 'King in act 2 scene 1' },
+      { text: 'Don\'t you know it\'s bad luck to teach magic on Wednesdays?', origin: 'King in act 2 scene 1' },
+      { text: 'No! My secret has been discovered!', origin: 'King in act 2 scene 1' },
+      { text: 'Leave me be, monster! I-I\'m just a poor, frail old man!', origin: 'King in act 2 scene 3' },
+      { text: 'And... er... um... You wouldn\'t hit a guy with glasses, would you?', origin: 'King in act 2 scene 3' },
+      { text: 'Little doll? It can\'t be! I... that is, you...', origin: 'King in act 2 scene 3' },
+      { text: 'My power? Never!', origin: 'King in act 2 scene 3' },
+      { text: 'It seems that the years / had not been kind to the King,', origin: 'Narrator in act 3 scene 2' },
+      { text: 'And so, / with the treacherous King gone and forgotten, / the little doll became a just and formidable Queen.', origin: 'Narrator in act 3 scene 3' },
+      ],
+    "Loading Screen Texts":[
+      { text: 'The future might be daunting, / The present\'s scary too / But if the past has taught us anything, / Together, we\'ll get through.', origin: 'A backward Glance Vignette description' },
+      { text: 'It was once thought that the beasts of the Constant were too wild and ferocious to be tamed. As it turns out, all any critter needs to make friends is a bit of love.', origin: 'Critters vignette description' },
+      { text: 'It\'s a well-known fact that a group of crows is called a murder. / It is a lesser known fact that they hold crow funerals.', origin: 'aristocrat Wickerbottom vignette description' },
+      { text: '”Always hold the board steady. Remember, a sharp knife is safer than a dull one. Don\'t forget.”', origin: 'Billy and Mumsy vignette description' },
+      { text: 'Knowledge can consume the mind to feed the soul. / And consume the soul to feed the mind.', origin: 'Mad Scientist Wilson vignette description' },
+      { text: 'The enemy of my enemy is my friend... or maybe something more?', origin: 'Got Your Back vignette description' },
+      { text: 'Love can be found in the least likely places.', origin: 'Swamp-crossed Love vignette description' },
+      { text: 'On a night like this, one doesn\'t want to travel alone.', origin: 'A Cold Moonlit Night vignette description' },
+      { text: 'It can be hard to look to the future when your heart remains in the past.', origin: 'Glory Days vignette description' },
+      { text: 'But time can change people.', origin: 'Next of Kin vignette description' },
+      { text: '“Don\'t be silly, it\'s just a bad dream…”', origin: 'The Nightmare vignette description' },
+      { text: 'Some things simply can\'t be undone.', origin: 'No Way Back vignette description' },
+      { text: 'naughtiness always comes back to bite you in the end.', origin: 'Along Came a Spider vignette description' },
+      { text: 'Freeing him might not have been my best idea.', origin: 'Nightmare Werepig vignette description' },
+      { text: 'Could there be light at the end of the tunnel?', origin: 'What Lies Ahead vignette description' },
+      { text: 'Open your mind to terrifying new possibilities.', origin: 'Enlight the Darkness vignette description' },
+      { text: 'Don\'t let your guard down... there are eyes everywhere.', origin: 'Nightfall vignette description' },
+      { text: 'It\'s the thought that counts.', origin: 'A Helping Hand vignette description' },
+      { text: 'Maxwell grew quite accustomed to a world that followed his rules...', origin: 'part of The Puppetmaster vignette description' },
+      { text: 'But now someone else is pulling the strings.', origin: 'part of The Puppetmaster vignette description' },
+      { text: 'Few things can set the Queen of the Constant herself on edge…', origin: 'Rumblings Above vignette description' },
+      { text: 'You won\'t be able to run forever.', origin: 'Narrow Escape vignette description' },
+      { text: 'Who is ready to step out into the spotlight?', origin: 'A Little Drama vignette description' },
+      { text: 'Everyone take your seats, the Amazing Maxwell\'s next act is about to begin.', origin: 'The Amazing Maxwell vignette description' },
+      { text: 'Who, or what, will heed the call of the Shadow Queen?', origin: 'Open The Gateway vignette description' },
+      { text: 'Maxwell now finds himself surviving alongside the very people he once tormented.', origin: 'lore tips' },
+      { text: 'Have you met Charlie yet?', origin: 'lore tips' },
+      { text: 'Some bonds transcend even death.', origin: 'lore tips' },
+      { text: 'You can\'t run from Them forever. Take it from me, pal.', origin: 'Maxwell\'s lore tip' },
+      { text: 'Blast this heat! Where\'s a nice, chilled drink when you need it?', origin: 'Maxwell\'s survival tip' },
+      { text: 'They say the Shadow Queen herself comes at night to snatch up anyone foolish enough to wander in the dark…', origin: 'survival tip' },
+      { text: 'We shouldn\'t hurt things that don\'t hurt us.', origin: 'survival tip' },
+    ],
+    
+    "Item Descriptions":[
+      { text: 'There\'s remerkable beauty within the terrifying depths of the sea.', origin: 'Shellbound portrait frame description' },
+      { text: 'All things die. Not all things stay dead.', origin: 'Cemetary portrait frame description' },
+      { text: 'Don\'t look behind you.', origin: 'Monstrous Horror portrait frame description' },
+      { text: 'Ornaments of dread.', origin: 'Hanging Horrors portrait frame description' },
+      { text: 'An empty shrine needs a sacrifice.', origin: 'Empty Pig Shrine portrait frame description' },
+      { text: 'The hunt is on!', origin: 'Year of the Varg portrait frame description' },
+      { text: 'Take care where you place your hands.', origin: 'Spiky Tree portrait frame description' },
+      { text: 'Lucid dreaming damage', origin: 'dark sword item description' },
+      { text: 'Protects your body, but not your mind.', origin: 'night armor item description' },
+      { text: 'Resurrect yourself via the power of meat.', origin: 'meat effigy item description' },
+      { text: 'Amplify the magical power of your top hat.', origin: 'prestihatitator item description' },
+      { text: 'Music to soothe savage beasts.', origin: 'pan flute item description' },
+      { text: 'Even crazy musicians amass a following', origin: 'one-man band item description' },
+      { text: 'Light the night with your dreams.', origin: 'night light item description' },
+      { text: 'Protects you from death.', origin: 'life giving amulet item description' },
+      { text: 'What a cool amulet.', origin: 'chilled amulet item description' },
+      { text: 'Induce insanity.', origin: 'nightmare amulet item description' },
+      { text: 'Harness the power of combustion!', origin: 'fire staff item description' },
+      { text: 'Freeze enemies in their tracks.', origin: 'ice staff item description' },
+      { text: 'Make the world weep.', origin: 'dripple pipes item description' },
+      { text: 'Teleport south for the winter.', origin: 'seaworthy item description' },
+      { text: 'Hop on board. What could possibly go wrong?', origin: 'skyworthy item description' },
+      { text: 'Evil residue used by the foolish and crazy.', origin: 'nightmare fuel item description' },
+      { text: 'Have no fear, the darkness will protect you.', origin: 'dreadstone armor item description' },
+      { text: 'Yes, the feather IS necessary.', origin: 'feather pencil item description' },
+      { text: 'Surround yourself in the most dreadful décor.', origin: 'dreadstone wall item description' },
+      { text: 'Super super soft.', origin: 'lush carpet item description' },
+      { text: 'Sit back, relax, and listen to the soundtrack of your nightmares.', origin: 'gramophone item description' },
+      { text: 'Pull power from the heavens.', origin: 'magiluminescence item description' },
+      { text: 'These walls will take quite a beating.', origin: 'thulecite wall item description' },
+      { text: 'Summon a tiny star.', origin: 'star caller\'s staff item description' },
+      { text: 'Clean and efficient destruction.', origin: 'deconstruction staff item description' },
+      { text: 'Spikes make everything better.', origin: 'thulecite club item description' },
+      { text: 'Create horrors for your convenience.', origin: 'shadowcraft plinth kit item description' },
+      { text: 'Ethereal bodyguard.', origin: 'DS-era shadow duelist item description' },
+      { text: 'Ghastly revival of a ghostly friend.', origin: 'telltale heart item description' },
+      { text: 'The power of darkness holDS up well under pressure.', origin: 'dreadstone pillar item description' },
+      { text: 'A nightmarish cloak to keep the light at bay.', origin: 'void robe item description' },
+      { text: 'Shadowy protection even from the harshest rainfall', origin: 'umbralla item description' },
+      { text: 'It\'ll keep coming back for more!', origin: 'gloomerang item description' },
+      { text: 'Grab the reins and reign over the battlefield', origin: 'nightmare saddle item description' },
+      { text: 'Knock\'em out cold!', origin: 'flash freeze staff item description' },
+      { text: 'It pleases when broken into pieces.', origin: 'portation orb fragment item description' },
+      { text: 'A thorn in your side.', origin: 'rose golf course obstacle item description' },
+      { text: 'A chesspiece with a checkered past.', origin: 'bishop figure item description' },
+      { text: 'The most powerful piece on the board.', origin: 'queenly figure item description' },
+      { text: 'Behind every queen is a dapper king.', origin: 'kingly figure item description' },
+      { text: 'Writhing reinforcements', origin: 'fragment of dreaded mudslinger item description' },
+    ],
+    "Charlie":[
+      { text: 'Pride… Arrogance… Conceit…', origin: 'Charlie speech file' },
+      { text: 'This was your fault…', origin: 'Charlie speech file' },
+      { text: 'You did this…', origin: 'Charlie speech file' },
+      { text: 'You…', origin: 'Charlie speech file' },
+      { text: 'You haven\'t escaped its pull…', origin: 'Charlie speech file' },
+      { text: 'Your hubris… Maxy… it was always your weakness…', origin: 'Charlie speech file' },
+      { text: '… Make your jokes… I\'ll be seeing you soon…', origin: 'Charlie speech file' },
+      { text: '… I\'m so sorry, I never meant for you to come here.', origin: 'Charlie speech file' },
+      { text: 'This wasn\'t a aprt of my plan, but as you\'re here now… / …I suppose I\'ll have to make do.', origin: 'Charlie speech file' },
+      { text: '… I suppose I\'ll have to make do.', origin: 'Charlie speech file' },
+      { text: 'You\'ve changed so much.', origin: 'Charlie speech file' },
+      { text: 'How much time has passed for you?', origin: 'Charlie speech file' },
+      { text: 'I should like to speak, face to face.', origin: 'Charlie speech file' },
+      { text: 'The ritual demands sacrifices.', origin: 'charlie monologue for sacrifices' },
+      { text: 'Seek them out. Allow them to be touched by Shadow…', origin: 'charlie monologue for sacrifices' },
+      { text: 'We\'ve done it.', origin: 'charlie monologue for ritual start' },
+      { text: 'They whom we call Shrouden accept our sacrifices.', origin: 'charlie monologue for ritual start' },
+      { text: 'What\'s happening?!', origin: 'charlie monologue for ritual start' },
+      { text: 'No! They\'re the sacrifice, not me!', origin: 'charlie monologue for ritual start' },
+      ],
+    
+
+    "Shadow Mual":[
+      { text: 'Why aren\'t we killing something?', origin: 'level 2-3 shadow maul' },
+      { text: 'What shall we destroy next, wielder?', origin: 'level 2-3 shadow maul' },
+      { text: 'We shall commit unspeakable acts of savagery!', origin: 'level 2-3 shadow maul' },
+      { text: 'Mortal, do you realize what we are capable of together?', origin: 'level 2-3 shadow maul' },
+      { text: 'I reflect on our path of destruction with fondness.', origin: 'level 3 shadow maul' },
+      { text: 'I fell for you.', origin: 'level 2-3 shadow maul, Woodie wielder' },
+      { text: 'I crave beast flesh!', origin: 'level 2-3 shadow maul, hungry' },
+      { text: 'You dare neglect me, mortal?', origin: 'level 3 shadow maul, hungry' },
+      { text: 'Death gives me life.', origin: 'level 3 shadow maul, hungry' },
+      { text: 'Shall we murder something of consequence now?', origin: 'level 2-3 shadow maul mob kill' },
+      { text: 'Nothing sweeter than death delivered by your hand and my face.', origin: 'level 2-3 shadow maul kill' },
+      { text: 'Yes. / All… m-mine.', origin: 'shadow maul chopping level 1, Woodie wielder' },
+      { text: 'No one will ever split us apart. / Hold me tight!', origin: 'shadow maul chopping level 2-3, Woodie wielder' },
+      { text: 'Never let me go.', origin: 'shadow maul chopping level 3, Woodie wielder' },
+      { text: 'Are you trying to kill me, wretched mortal?', origin: 'shadow maul level 2-3, starving' },
+      { text: 'If I\'m not killing, I\'m dying!', origin: 'shadow maul level 2-3, starving' },
+      { text: 'Cursed mortal / Is this the end?', origin: 'shadow maul level 3, starving' },
+      { text: 'I\'m proud of us.', origin: 'shadow maul level 3, boss kill' },
+      ],
+
+    "Animated Shorts":[
+      { text: 'My magic act partner has taught me so much about showmanship in such a short time.', origin: 'Charlie\'s letter, Next of Kin short' },
+      { text: 'Sorry we can\'t make it.', origin: 'Charlie\'s letter, Forgone short' },
+      { text: 'We have our biggest show coming up.', origin: 'Charlie\'s letter, Forgone short' },
+      { text: 'It\'s easy to lose ourselves in dreams of what might have been.', origin: 'Klei description for Forgone short' },
+      { text: 'But reality creeps in, quiet and inevitable like shadows at dusk.', origin: 'Klei description for Forgone short' },
+      { text: 'As the shadow arc draws to a close, every promise must be honored, every debt paid.', origin: 'Klei description for Forgone short' },
+      { text: 'Some things, once lost, are gone forever... but how will you know for sure unless you keep searching?', origin: 'Klei description for Hide & Seek short' },
+      { text: 'In this place where lines were drawn long ago, life can be short, terrifying and chaotic, but sometimes there comes a moment that makes it worth it.', origin: 'Klei description for Tales From The Constant: Falling short' },
+      { text: 'The former Nightmare King suddenly finds himself facing his past…', origin: 'Klei description for Encore short' },
+      { text: 'Everyone take your seats, the Amazing Maxwell\'s next act is about to begin.', origin: 'Klei description for Encore short' },
+      { text: 'It\'s been a while, old friend ♡', origin: 'Encore, animated short' },
+      { text: 'But… That was all before…', origin: 'Encore, animated short' },
+      { text: 'If only you had Let Me In…', origin: 'Encore, animated short' },
+      { text: 'LET ME IN', origin: 'Encore, animated short' },
+      { text: 'But things worked out…', origin: 'Encore, animated short' }, 
+      { text: 'But things worked out… for one of us…', origin: 'Encore, animated short' },
+      { text: 'Still… We made a good team once.', origin: 'Encore, animated short' },
+      { text: 'What do you say, Maxy?', origin: 'Encore, animated short' },
+      { text: 'Ready for an Encore? ♡', origin: 'Encore, animated short' },
+      { text: 'A pause for reflection ignited… affection?', origin: 'Tales From The Constant: Falling animated short' },
+      { text: 'An impact avoids impact / Ironically, saving both their hides', origin: 'Tales From The Constant: Falling, animated short' },
+      { text: 'The two species collide', origin: 'Tales From The Constant: Falling, animated short' },
+      { text: 'The enemy of my enemy just might be my friend.', origin: 'Tales From The Constant: Falling, animated short' },
+      { text: 'We can get along, surely / Surely, here is the proof!', origin: 'Tales From The Constant: Falling, animated short' },
+      { text: 'Alas, the meet-cute was ruined', origin: 'Tales From The Constant: Falling, animated short' },
+      { text: 'But the strength of that limb did not match that of their love', origin: 'Tales From The Constant: Falling, animated short' },
+      { text: 'This moment of respite revealed two fateful facts / The two were together and there was no going back.', origin: 'Tales From The Constant: Falling, animated short' },
+      { text: '[William] felt true power for the first time in his life.', origin: 'DST compendium entry' },
+
+      ],
+    "William Carter Puzzles":[
+
+      { text: 'You better pay up this week or there will be trouble! I will find you!', origin: 'note to William from Witherstone, William Carter Puzzles' },
+      { text: 'The missing man has been presumed dead.', origin: 'newspaper, William Carter Puzzles' },
+      { text: 'All will be explained when we meet.', origin: 'letter to Jack, William Carter Puzzles' },
+      { text: 'My fear was so great that I almost faltered in my incantations.', origin: 'Maxwell\'s journal, William Carter Puzzles' },
+      { text: 'Previous experience unnecessary, but should have a curious demeanor and a keen interest in the mysteries of the universe.', origin: 'Maxwell\'s ad, William Carter Puzzles' },
+      { text: 'Must provide own costume.', origin: 'Maxwell\'s ad, William Carter Puzzles' },
+      { text: 'PERFORMING FEATS TO ASTOUND AND MYSTIFY', origin: 'Maxwell\'s poster, William Carter Puzzles' },
+      { text: 'Hey Maxy, we really knocked ‘em dead last night, didn\'t we?', origin: 'Charlie\'s letter, William Carter Puzzles' },
+      { text: 'Those shadow things are so convincing – they almost scare me, and I\'m part of the act!', origin: 'Charlie\'s letter, William Carter Puzzles' },
+      { text: 'devinctionibus / pretiositas / Enough! / insaniam', origin: 'Maxwell\'s walls, William Carter Puzzles' },
+      { text: 'alucinatio / voces / tenebris / Charlie / Charlie / Charlie', origin: 'Maxwell\'s walls, William Carter Puzzles' },
+      { text: 'Max, where are you?', origin: 'Charlie\'s second letter, William Carter Puzzles' },
+      { text: 'XO, Charlie', origin: 'Charlie\'s second letter, William Carter Puzzles' },
+      { text: 'quiet / illuminate / perplexing / curiosity / trapped', origin: 'official image titles, William Carter Puzzles' },
+      { text: 'introrsus / regret / panic / remorse / … / ruined', origin: 'official image titles, William Carter Puzzles' },
+      ],
+    "Ancient Fuelweaver":[
+      { text: 'You will not suffer. / It must not be this way.', origin: 'Ancient Fuelweaver, battlecry' },
+      { text: 'I will save you.', origin: 'Ancient Fuelweaver, player battlecry' },
+      { text: 'How long have I slumbered?', origin: 'Ancient Fuelweaver, woven shadow summon' },
+      { text: 'You will rip apart at the seams.', origin: 'Ancient Fuelweaver, woven shadow summon' },
+      { text: 'Let us end it.', origin: 'Ancient Fuelweaver, woven shadow summon' },
+      { text: 'You cannot win.', origin: 'Ancient Fuelweaver, unseen hands summon' },
+      { text: 'Lend me your power, one last time.', origin: 'Ancient Fuelweaver, unseen hands summon' },
+      { text: 'Protect me.', origin: 'Ancient Fuelweaver, unseen hands summon' },
+      { text: 'You cannot hurt me.', origin: 'Ancient Fuelweaver, unseen hands summon' },
+      { text: 'You have been betrayed.', origin: 'Ancient Fuelweaver, unseen hands summon' },
+      { text: 'Metheus… / I must do this, for your sake.', origin: 'Ancient Fuelweaver, gateway turned off' },
+      { text: 'It cannot end like this.', origin: 'Ancient Fuelweaver, gateway turned off' },
+      { text: 'I was wrong.', origin: 'Ancient Fuelweaver, gateway turned off' },
+      { text: 'Please…', origin: 'Ancient Fuelweaver, player leaving battle' },
+      { text: 'Fools!', origin: 'Ancient Fuelweaver, death cry' },
+      { text: 'Are you so easily deceived? Ha…', origin: 'Ancient Fuelweaver, death cry' },
+      { text: 'you deserve this.', origin: 'Ancient Fuelweaver, death cry' },
+      { text: 'You\'ve made your choice.', origin: 'Ancient Fuelweaver, death cry' },
+      { text: 'It\'s all happening again…', origin: 'Ancient Fuelweaver, battle cry with gateway fixed' },
+      { text: 'I tried to stop it… It seems I learned nothing…', origin: 'Ancient Fuelweaver, battle cry with gateway fixed' },
+      { text: 'You fools! What have you done?', origin: 'Ancient Fuelweaver, player cry with gateway fixed' },
+      { text: 'You\'ve doomed yourselves.', origin: 'Ancient Fuelweaver, player cry with gateway fixed' },
+      { text: 'You have brought about your own end.', origin: 'Ancient Fuelweaver, player cry with gateway fixed' },
+      { text: 'Please. Let me save you from what is coming.', origin: 'Ancient Fuelweaver, player cry with gateway fixed' },
+      { text: 'I recognize your arrogance. I possessed it myself.', origin: 'Ancient Fuelweaver, player cry with gateway fixed' },
+      { text: 'They will not show mercy as I have.', origin: 'Ancient Fuelweaver, death cry with gateway fixed' },
+      { text: 'You\'ve made your choice.', origin: 'Ancient Fuelweaver, death cry with gateway fixed' },
+      { text: 'I couldn\'t stop it…', origin: 'Ancient Fuelweaver, death cry with gateway fixed' },
+      { text: 'The battle… I lost…', origin: 'fuelweaver ally spawn monologue' },
+      { text: 'You…! What have you done?!', origin: 'fuelweaver ally spawn monologue' },
+      { text: 'They are waiting…', origin: 'fuelweaver ally spawn monologue' },
+      { text: 'You have chosen… This innocent creature…', origin: 'fuelweaver ally boss corruption monologue' },
+      { text: 'To be woven… And be made an offering… To Them.', origin: 'fuelweaver ally boss corruption monologue' },
+      { text: 'As you wish… It is done.', origin: 'fuelweaver ally boss corruption monologue' },
+      { text: 'My once glorious kingdom is now a tomb.', origin: 'fuelweaver ally seeing atrium' },
+      { text: 'What have I done?', origin: 'fuelweaver ally seeing atrium' },
+      { text: 'I was a damned fool.', origin: 'fuelweaver ally seeing atrium' },
+      { text: 'How do you fight an enemy that has taken root in your very being?', origin: 'fuelweaver ally seeing military ruins' },
+      { text: 'I have desecrated these sacred grounds.', origin: 'fuelweaver ally seeing sacred ruins' },
+      { text: 'The cursed fuel has defiled all.', origin: 'fuelweaver ally seeing sacred ruins' },
+      { text: 'I can\'t bear the sight of it.', origin: 'fuelweaver ally seeing sacred ruins' },
+      { text: 'Better to be lost here. Wandering for an eternity…', origin: 'fuelweaver ally seeing ruins labyrinth' },
+      { text: 'Have you returned? Alas… not soon enough.', origin: 'fuelweaver ally seeing lunar grotto' },
+      { text: 'We lived in the light once.', origin: 'fuelweaver ally seeing archives' },
+      { text: 'An age of brilliance.', origin: 'fuelweaver ally seeing archives' },
+      { text: 'This is all that remains.', origin: 'fuelweaver ally seeing archives' },
+      { text: 'They trusted no one… especially me.', origin: 'fuelweaver ally seeing sanctum vault' },
+      { text: 'It is… me.', origin: 'fuelweaver ally inspecting self statue' },
+      { text: 'How long as it been… What have I become?', origin: 'fuelweaver ally inspecting self statue' },
+      { text: 'All lost… because of me.', origin: 'fuelweaver ally inspecting sanctum gateway' },
+      { text: 'It promised… All lies…', origin: 'fuelweaver ally inspecting sanctum gateway' },
+      { text: 'I was blind… a fool.', origin: 'fuelweaver ally inspecting sanctum gateway' },
+      { text: 'They stand guard over a doomed world.', origin: 'fuelweaver ally inspecting sanctum guard statues' },
+      { text: 'Fools fated to repeat the same mistakes.', origin: 'fuelweaver ally inspecting sanctum guard statues' },
+      { text: 'Was I not worthy of your trust?', origin: 'fuelweaver ally inspecting elytra\'s body' },
+      { text: 'What secret did you guard until your last breath?', origin: 'fuelweaver ally inspecting elytra\'s body' },
+      { text: 'How unbearable that weight must have been upon your soul… if it is still yours.', origin: 'fuelweaver ally inspecting elytra\'s body' },
+      { text: 'Poison? Did you know what it held? Did you choose it?', origin: 'fuelweaver ally inspecting visionist\'s body' },
+      { text: 'Why was death itself poured as your reward?', origin: 'fuelweaver ally inspecting visionist\'s body' },
+      { text: 'May your vision be restored, clear and made whole beyond the shroud.', origin: 'fuelweaver ally inspecting visionist\'s body' },
+      { text: 'This world is no longer our own.', origin: 'fuelweaver ally inspecting visionist\'s body' },
+      { text: 'So this is the cruel fate that befell my dear friend.', origin: 'fuelweaver ally inspecting artificer\'s body' },
+      { text: 'You deserved a far better end than this.', origin: 'fuelweaver ally inspecting artificer\'s body' },
+      { text: 'Yet you escaped… damning yourself.', origin: 'fuelweaver ally inspecting sanctum rune stones' },
+      { text: 'A fool in your wisdom…', origin: 'fuelweaver ally inspecting sanctum rune stones' },
+      { text: 'It\'s too late.', origin: 'fuelweaver ally inspecting sanctum rune stones' },
+      { text: 'Better one should wall than all.', origin: 'fuelweaver ally inspecting sequitor puzzle' },
+      { text: 'I\'ve seen the way and it is cursed.', origin: 'fuelweaver ally inspecting flummoxing flame puzzle' },
+      { text: 'Your devotion to my beloved shall never be forgotten.', origin: 'fuelweaver ally inspecting elytra mask' },
+      { text: 'What words did she impart to you in those darkest of days?', origin: 'fuelweaver ally inspecting elytra mask' },
+      { text: 'How I have missed you, old friend.', origin: 'fuelweaver ally inspecting artificer mask' },
+      { text: 'Never one to temper the truth, nor spare a wounded heart.', origin: 'fuelweaver ally inspecting artificer mask' },
+      { text: 'May you finally know rest.', origin: 'fuelweaver ally inspecting artificer mask' },
+      { text: 'My heart aches at the fate of your glorious design. It is a mercy that your eyes shall never behold its ruin.', origin: 'fuelweaver ally inspecting visionist mask' },
+      { text: 'So afraid of the dark…', origin: 'fuelweaver ally inspecting nightmare light' },
+      { text: 'But all who bathed in the glow… lost themselves to madness.', origin: 'fuelweaver ally inspecting nightmare light' },
+      { text: 'You left us little choice.', origin: 'fuelweaver ally inspecting nightmare ramparts' },
+      { text: 'Why did you leave us in the cold?', origin: 'fuelweaver ally inspecting nightmare ramparts' },
+      { text: 'Was our devotion so lacking?', origin: 'fuelweaver ally inspecting nightmare ramparts' },
+      { text: 'I chose our path.', origin: 'fuelweaver ally inspecting atrium obelisks' },
+      { text: 'They followed me… into damnation.', origin: 'fuelweaver ally inspecting atrium obelisks' },
+      { text: 'Am I to blame for the cursed fuel?', origin: 'fuelweaver ally inspecting atrium rubble' },
+      { text: 'Do you know what we sacrificed?', origin: 'fuelweaver ally inspecting atrium rubble' },
+      { text: 'Cursed shade. Inevitable that it should inherit this world.', origin: 'fuelweaver ally inspecting resting horror' },
+      { text: 'All we had left… Just pieces of you.', origin: 'fuelweaver ally inspecting archive statues' },
+      { text: 'Did you know we waited? Were we nothing to you?', origin: 'fuelweaver ally inspecting archive statues' },
+      { text: 'The dark cannot be harnessed… or controlled.', origin: 'fuelweaver ally inspecting ancient pseudoscience station' },
+      { text: 'We paid the price for our arrogance.', origin: 'fuelweaver ally inspecting ancient pseudoscience station' },
+      { text: 'How long did you expect us to wait?', origin: 'fuelweaver ally inspecting archive runes' },
+      { text: 'You left us.', origin: 'fuelweaver ally inspecting archive runes' },
+      { text: 'Faith alone could not sustain.', origin: 'fuelweaver ally inspecting archive runes' },
+      { text: 'We were wrong.', origin: 'fuelweaver ally inspecting fountain of knowledge' },
+      { text: 'We thought our knowledge gave us power over the forces we tampered with.', origin: 'fuelweaver ally inspecting fountain of knowledge' },
+      { text: 'It\'s been an eternity.', origin: 'fuelweaver ally inspecting archive portal' },
+      { text: 'My memory fails me.', origin: 'fuelweaver ally inspecting archive portal' },
+      { text: 'I don\'t remember this.', origin: 'fuelweaver ally inspecting archive portal' },
+      { text: 'A blessing you can\'t see our world in ruin.', origin: 'fuelweaver ally inspecting ruin statue' },
+      { text: 'We should have known better… I should have known better.', origin: 'fuelweaver ally inspecting ruin statue' },
+      { text: 'At least I sought to save our world.', origin: 'fuelweaver ally inspecting nightmare werepig' },
+      { text: 'Your lust for power consumes you.', origin: 'fuelweaver ally inspecting nightmare werepig' },
+      { text: 'May you never escape your bondage.', origin: 'fuelweaver ally inspecting nightmare werepig' },
+      { text: 'Your world is infected.', origin: 'fuelweaver ally inspecting shadow rift' },
+      { text: 'Kept hidden … by my beloved.', origin: 'fragments of fuelweaver ally inspecting vault key' },
+      { text: 'Now you\'ve unearthed it… damning one and all.', origin: 'fuelweaver ally inspecting vault key' },
+      { text: 'Maxwell… the king deposed.', origin: 'fuelweaver ally inspecting maxwell' },
+      { text: 'Unimaginable power, once at your fingertips. And now… you are nothing.', origin: 'fuelweaver ally inspecting maxwell' },
+      { text: 'Still, you fare better than I…', origin: 'fuelweaver ally inspecting maxwell' },
+      { text: 'A husk filled with naught but echoes of regret.', origin: 'fuelweaver ally inspecting maxwell' },
+      { text: 'I arise yet again.', origin: 'fuelweaver ally spawned a second time' },
+      { text: 'My slumber ends.', origin: 'fuelweaver ally spawned a second time' },
+      { text: 'Why do you disturb my rest?', origin: 'fuelweaver ally spawned a second time' },
+      { text: 'Is this my curse?', origin: 'fuelweaver ally spawned a second time' },
+      { text: 'Must I see the ruins of my world again?', origin: 'fuelweaver ally spawned a second time' },
+      { text: 'No more… I beg of you.', origin: 'fuelweaver ally spawned a second time' },
+      { text: 'Rise anew and bring glory.', origin: 'fuelweaver ally performing corruption' },
+      { text: 'We are all pawns.', origin: 'fuelweaver ally performing corruption' },
+      { text: 'Your sacrifice will not be forgotten.', origin: 'fuelweaver ally performing corruption' },
+      { text: 'We will make Them pay… make Them suffer.', origin: 'fuelweaver ally performing corruption' },
+      { text: 'Where is she?', origin: 'fuelweaver ally idle speech' },
+      { text: 'My love…', origin: 'fuelweaver ally idle speech' },
+      { text: 'Where is she? My love…', origin: 'fuelweaver ally idle speech' },
+      { text: 'It is a nightmare eternal.', origin: 'fuelweaver ally idle speech' },
+      { text: 'Come back to me…', origin: 'fuelweaver ally idle speech' },
+      { text: 'My love… Come back to me…', origin: 'fuelweaver ally idle speech' },
+      { text: 'Who are you?', origin: 'fuelweaver ally greeting speech' },
+      { text: 'Have you seen her?', origin: 'fuelweaver ally greeting speech' },
+      { text: 'Why do you torment me?', origin: 'fuelweaver ally greeting speech' },
+      { text: 'Do you know who I am?', origin: 'fuelweaver ally greeting speech' },
+      { text: 'Will you not let this old king rest his weary bones?', origin: 'fuelweaver ally following thurible' },
+      { text: 'You would lead a king like a thrall?', origin: 'fuelweaver ally following thurible' },
+      { text: 'I shall follow… with every step steeped in shame.', origin: 'fuelweaver ally following thurible' },
+      { text: 'What choice have I but to walk at your command?', origin: 'fuelweaver ally following thurible' },
+      { text: 'Where are you leading me?', origin: 'fuelweaver ally following thurible' },
+      { text: 'I shall follow you to your doom.', origin: 'fuelweaver ally following thurible' },
+      { text: 'You may prove a greater fool than I.', origin: 'fuelweaver ally following thurible' },
+      { text: 'Are you lost? For I am.', origin: 'fuelweaver ally following thurible' },
+      { text: 'Gone… all gone.', origin: 'fuelweaver ally idle for atrium' },
+      { text: 'They trusted me. I failed them.', origin: 'fuelweaver ally idle for residential ruins' },
+      { text: 'I was our enemy.', origin: 'fuelweaver ally idle for military ruins' },
+      { text: 'All that was once sacred now stand defiled.', origin: 'fuelweaver ally idle for sacred ruins' },
+      { text: 'Does my old friend still roam these parts?', origin: 'fuelweaver ally idle for labyrinth' },
+      { text: 'It pains me to remember what we once were.', origin: 'fuelweaver ally idle for archives' },
+      { text: 'You should have never come here.', origin: 'fuelweaver ally idle for sanctum' },
+      { text: 'All I touch is laid to ruin!', origin: 'fuelweaver ally after destroying a structure' },
+      { text: 'My way is ever cursed!', origin: 'fuelweaver ally after destroying a structure' },
+      { text: 'Like my world, broken forever.', origin: 'fuelweaver ally after destroying a structure' },
+      ],
+            };
+
+      categories.all = Object.values(categories).flat();
+
+      function getSentenceText(item) {
+        return typeof item === 'string' ? item : item && typeof item.text === 'string' ? item.text : '';
+      }
+
+      function getSentenceOrigin(item) {
+        return typeof item === 'string' ? '' : item && typeof item.origin === 'string' ? item.origin : '';
+      }
+
+      function getCategoryItems(categoryKey) {
+        const items = categories[categoryKey];
+        if (!Array.isArray(items)) return [];
+
+        return items.filter((item) => {
+          const valid = getSentenceText(item).trim().length > 0;
+          if (!valid) {
+            console.warn(`Skipping an empty or invalid sentence in category "${categoryKey}".`);
+          }
+          return valid;
+        });
+      }
+
+      function shuffleItems(items) {
+        const shuffled = [...items];
+        for (let index = shuffled.length - 1; index > 0; index -= 1) {
+          const randomIndex = Math.floor(Math.random() * (index + 1));
+          [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+        }
+        return shuffled;
+      }
+
+      const sentenceList = document.getElementById('sentenceList');
+      const sentenceTrack = document.getElementById('sentenceTrack');
+      const categoryList = document.getElementById('categoryList');
+      const spinButton = document.getElementById('spinButton');
+      const winnerOverlay = document.getElementById('winnerOverlay');
+      const winnerText = document.getElementById('winnerText');
+      const historyButton = document.getElementById('historyButton');
+      const historyButtonIcon = document.getElementById('historyButtonIcon');
+      const historyOverlay = document.getElementById('historyOverlay');
+      const historyList = document.getElementById('historyList');
+      const clearHistoryButton = document.getElementById('clearHistoryButton');
+
+      let selectedCategory = Object.keys(categories)[0];
+      let isSpinning = false;
+      let isWinnerShown = false;
+      let isHistoryShown = false;
+      let scrollOffset = 0;
+      let displayedItems = [];
+      let slowScrollSpeed = 0.35;
+      const SPIN_DURATION = 6500;
+      const SPIN_LOOPS = 4;
+      const HISTORY_KEY = 'sentenceWheelHistory';
+      const HISTORY_LIMIT = 200;
+      const SPIN_HISTORY_LIMIT = 3;
+      const AUDIO_CONFIG = {
+        clickspinnormal: { src: 'Maxblonda/clickspinnormal.ogg', volume: 0.6 },
+        clickspinfinal: { src: 'Maxblonda/clickspinfinal.ogg', volume: 0.6 },
+        resultreceived: { src: 'Maxblonda/resultreceived.ogg', volume: 0.7 },
+        clickbutton: { src: 'Maxblonda/clickbutton.ogg', volume: 0.5 },
+        deletehistory: { src: 'Maxblonda/deletehistory.ogg', volume: 0.6 },
+        missyouidle: { src: 'Maxblonda/missyouidle.ogg', volume: 0.5 },
+        selectweek: { src: 'Maxblonda/selectweek.ogg', volume: 0.5 },
+        showspoiler: { src: 'Maxblonda/showspoiler.ogg', volume: 0.5 },
+      };
+      const activeAudioTimers = new Map();
+      const activeAudioHandles = new Map();
+      let activeReversedSource = null;
+
+      function stopManagedAudio(soundKey) {
+        const timer = activeAudioTimers.get(soundKey);
+        if (timer) {
+          window.clearTimeout(timer);
+          activeAudioTimers.delete(soundKey);
+        }
+
+        const fadeTimer = activeAudioTimers.get(`${soundKey}-fade`);
+        if (fadeTimer) {
+          window.clearTimeout(fadeTimer);
+          activeAudioTimers.delete(`${soundKey}-fade`);
+        }
+
+        const audio = activeAudioHandles.get(soundKey);
+        if (audio) {
+          try { audio.pause(); } catch (e) {}
+          try { audio.currentTime = 0; } catch (e) {}
+          activeAudioHandles.delete(soundKey);
+        }
+      }
+
+      function playSound(soundName) {
+        const sound = AUDIO_CONFIG[soundName];
+        if (!sound) return;
+
+        if (soundName !== 'clickbutton') {
+          Array.from(activeAudioHandles.entries()).forEach(([activeKey, activeAudio]) => {
+            if (activeKey === 'clickbutton') return;
+            stopManagedAudio(activeKey);
+          });
+        }
+
+        const previousTimer = activeAudioTimers.get(soundName);
+        if (previousTimer) window.clearTimeout(previousTimer);
+        const previousFadeTimer = activeAudioTimers.get(`${soundName}-fade`);
+        if (previousFadeTimer) window.clearTimeout(previousFadeTimer);
+
+        const audio = new Audio(sound.src);
+        const baseVolume = typeof sound.volume === 'number' ? sound.volume : 1;
+        const fadeOutMs = soundName === 'resultreceived' ? 450 : 0;
+        audio.volume = baseVolume;
+        audio.currentTime = 0;
+        activeAudioHandles.set(soundName, audio);
+        audio.play().catch(() => {});
+
+        let stopTimer = null;
+        const stopAudio = () => {
+          try { audio.pause(); } catch (e) {}
+          try { audio.currentTime = 0; } catch (e) {}
+          activeAudioTimers.delete(soundName);
+          activeAudioHandles.delete(soundName);
+        };
+        const setStop = (ms) => {
+          if (stopTimer) window.clearTimeout(stopTimer);
+          stopTimer = window.setTimeout(() => {
+            stopAudio();
+          }, ms);
+          activeAudioTimers.set(soundName, stopTimer);
+        };
+
+        if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
+          const durationMs = Math.max(100, Math.round(audio.duration * 1000));
+          const fadeDelay = Math.max(0, durationMs - fadeOutMs);
+          if (fadeOutMs > 0) {
+            const fadeTimer = window.setTimeout(() => {
+              const start = performance.now();
+              const startVolume = audio.volume;
+              const fadeStep = () => {
+                const elapsed = performance.now() - start;
+                const progress = Math.min(elapsed / fadeOutMs, 1);
+                audio.volume = Math.max(0, startVolume * (1 - progress));
+                if (progress < 1) {
+                  requestAnimationFrame(fadeStep);
+                } else {
+                  stopAudio();
+                }
+              };
+              requestAnimationFrame(fadeStep);
+            }, fadeDelay);
+            activeAudioTimers.set(`${soundName}-fade`, fadeTimer);
+          }
+          setStop(durationMs);
+        } else {
+          const fallbackMs = 5000;
+          const fadeDelay = Math.max(0, fallbackMs - fadeOutMs);
+          if (fadeOutMs > 0) {
+            const fadeTimer = window.setTimeout(() => {
+              const start = performance.now();
+              const startVolume = audio.volume;
+              const fadeStep = () => {
+                const elapsed = performance.now() - start;
+                const progress = Math.min(elapsed / fadeOutMs, 1);
+                audio.volume = Math.max(0, startVolume * (1 - progress));
+                if (progress < 1) {
+                  requestAnimationFrame(fadeStep);
+                } else {
+                  stopAudio();
+                }
+              };
+              requestAnimationFrame(fadeStep);
+            }, fadeDelay);
+            activeAudioTimers.set(`${soundName}-fade`, fadeTimer);
+          }
+          setStop(fallbackMs);
+          const onLoaded = () => {
+            audio.removeEventListener('loadedmetadata', onLoaded);
+            const durMs = Math.max(100, Math.round((audio.duration || 0.2) * 1000));
+            const fadeDelay = Math.max(0, durMs - fadeOutMs);
+            if (fadeOutMs > 0) {
+              const existingFadeTimer = activeAudioTimers.get(`${soundName}-fade`);
+              if (existingFadeTimer) window.clearTimeout(existingFadeTimer);
+              const fadeTimer = window.setTimeout(() => {
+                const start = performance.now();
+                const startVolume = audio.volume;
+                const fadeStep = () => {
+                  const elapsed = performance.now() - start;
+                  const progress = Math.min(elapsed / fadeOutMs, 1);
+                  audio.volume = Math.max(0, startVolume * (1 - progress));
+                  if (progress < 1) {
+                    requestAnimationFrame(fadeStep);
+                  } else {
+                    stopAudio();
+                  }
+                };
+                requestAnimationFrame(fadeStep);
+              }, fadeDelay);
+              activeAudioTimers.set(`${soundName}-fade`, fadeTimer);
+            }
+            setStop(durMs);
+          };
+          audio.addEventListener('loadedmetadata', onLoaded);
+        }
+      }
+
+      async function playReversedSound(soundName) {
+        const sound = AUDIO_CONFIG[soundName];
+        if (!sound) return;
+
+        if (activeReversedSource) {
+          try { activeReversedSource.stop(); } catch (e) {}
+          activeReversedSource = null;
+        }
+
+        try {
+          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const response = await fetch(sound.src);
+          const audioData = await response.arrayBuffer();
+          const audioBuffer = await audioContext.decodeAudioData(audioData);
+
+          for (let channelIndex = 0; channelIndex < audioBuffer.numberOfChannels; channelIndex += 1) {
+            const channelData = audioBuffer.getChannelData(channelIndex);
+            for (let left = 0, right = channelData.length - 1; left < right; left += 1, right -= 1) {
+              const sample = channelData[left];
+              channelData[left] = channelData[right];
+              channelData[right] = sample;
+            }
+          }
+
+          const source = audioContext.createBufferSource();
+          const gain = audioContext.createGain();
+          source.buffer = audioBuffer;
+          gain.gain.value = typeof sound.volume === 'number' ? sound.volume : 1;
+          source.connect(gain);
+          gain.connect(audioContext.destination);
+          activeReversedSource = source;
+          source.onended = () => {
+            if (activeReversedSource === source) activeReversedSource = null;
+            audioContext.close();
+          };
+          source.start();
+        } catch (error) {
+          // The reveal sound remains available if reversed playback is unsupported.
+        }
+      }
+
+    function updateSpinAvailability() {
+      const capped = loadHistory().length >= SPIN_HISTORY_LIMIT;
+      spinButton.disabled = capped;
+      spinButton.title = capped ? 'Clear some history to spin again' : '';
+
+      if (clearHistoryButton) {
+        clearHistoryButton.disabled = loadHistory().length === 0;
+      }
+    
+      updateGhostVisibility();
+    }
+      const HISTORY_FRAME_SOURCES = ['evilflower.png', 'evilflower-2.png', 'evilflower-3.png'];
+      const HISTORY_FRAME_TIME = 110;
+      const historyFramesLoaded = [true, false, false];
+      let historyAnimationToken = 0;
+
+      HISTORY_FRAME_SOURCES.slice(1).forEach((source, index) => {
+        const image = new Image();
+        image.onload = () => {
+          historyFramesLoaded[index + 1] = true;
+        };
+        image.src = source;
+      });
+
+      function setHistoryFrame(frameIndex) {
+        const safeIndex = Math.max(0, Math.min(frameIndex, HISTORY_FRAME_SOURCES.length - 1));
+        historyButtonIcon.src = historyFramesLoaded[safeIndex]
+          ? HISTORY_FRAME_SOURCES[safeIndex]
+          : HISTORY_FRAME_SOURCES[0];
+      }
+
+      function animateHistoryFrames(frameIndexes, onComplete) {
+        const token = ++historyAnimationToken;
+        historyButton.classList.add('is-animating');
+
+        frameIndexes.forEach((frameIndex, index) => {
+          window.setTimeout(() => {
+            if (token !== historyAnimationToken) return;
+            setHistoryFrame(frameIndex);
+            if (index === frameIndexes.length - 1) {
+              historyButton.classList.remove('is-animating');
+              onComplete();
+            }
+          }, index * HISTORY_FRAME_TIME);
+        });
+      }
+
+    
+      const GHOST_FRAME_COUNT = 62;
+      const GHOST_FRAME_DIR = 'watcher/';
+      const GHOST_FRAME_TIME = 55; 
+      const ghostFramesLoaded = new Array(GHOST_FRAME_COUNT).fill(false);
+      const ghostFrameSources = [];
+      let ghostFrameIndex = 0;
+      let ghostFrameDirection = 1;
+      let ghostAnimTimer = null;
+
+      for (let i = 0; i < GHOST_FRAME_COUNT; i++) {
+        const src = `${GHOST_FRAME_DIR}frame-${i}.png`;
+        ghostFrameSources[i] = src;
+        const preloadImg = new Image();
+        preloadImg.onload = () => { ghostFramesLoaded[i] = true; };
+        preloadImg.src = src;
+      }
+
+      function setGhostFrame(index) {
+        const ghostImg = document.getElementById('ghostImg');
+        if (!ghostImg) return;
+
+        const safeIndex = ghostFramesLoaded[index] ? index : 0;
+        ghostImg.src = ghostFrameSources[safeIndex];
+      }
+
+      function stepGhostFrame() {
+        setGhostFrame(ghostFrameIndex);
+       
+        ghostFrameIndex += ghostFrameDirection;
+        if (ghostFrameIndex >= GHOST_FRAME_COUNT - 1) {
+          ghostFrameIndex = GHOST_FRAME_COUNT - 1;
+          ghostFrameDirection = -1;
+        } else if (ghostFrameIndex <= 0) {
+          ghostFrameIndex = 0;
+          ghostFrameDirection = 1;
+        }
+      }
+
+      function startGhostAnimation() {
+        if (ghostAnimTimer) return;
+        ghostAnimTimer = window.setInterval(stepGhostFrame, GHOST_FRAME_TIME);
+      }
+
+      function stopGhostAnimation() {
+        if (ghostAnimTimer) {
+          window.clearInterval(ghostAnimTimer);
+          ghostAnimTimer = null;
+        }
+      }
+
+    
+      function syncGhostImgSize() {
+        const viewport = document.getElementById('ghostViewport');
+        const ghostImg = document.getElementById('ghostImg');
+        if (!viewport || !ghostImg) return;
+        const rect = viewport.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return;
+        ghostImg.style.width = `${rect.height}px`;
+        ghostImg.style.height = `${rect.width}px`;
+      }
+
+      window.addEventListener('resize', syncGhostImgSize);
+      window.addEventListener('orientationchange', syncGhostImgSize);
+      if (window.ResizeObserver) {
+        const ghostViewportEl = document.getElementById('ghostViewport');
+        if (ghostViewportEl) {
+          new ResizeObserver(syncGhostImgSize).observe(ghostViewportEl);
+        }
+      }
+
+  
+      function updateGhostVisibility() {
+        const overlay = document.getElementById('ghostOverlay');
+        if (!overlay) return;
+        const capped = loadHistory().length >= SPIN_HISTORY_LIMIT;
+        if (capped) {
+          overlay.classList.add('visible');
+          syncGhostImgSize();
+          startGhostAnimation();
+        } else {
+          overlay.classList.remove('visible');
+          stopGhostAnimation();
+        }
+      }
+
+      function setControlsLocked(locked) {
+        spinButton.disabled = locked || loadHistory().length >= SPIN_HISTORY_LIMIT;
+        historyButton.disabled = locked;
+        categoryList.querySelectorAll('.category-button').forEach((btn) => {
+          btn.disabled = locked;
+        });
+      }
+
+      function loadHistory() {
+        try {
+          const raw = localStorage.getItem(HISTORY_KEY);
+          return raw ? JSON.parse(raw) : [];
+        } catch (err) {
+          return [];
+        }
+      }
+
+      function saveHistory(entries) {
+        try {
+          localStorage.setItem(HISTORY_KEY, JSON.stringify(entries));
+        } catch (err) {
+
+        }
+      }
+
+      function addHistoryEntry(sentence, origin) {
+        const entries = loadHistory();
+        const dateLabel = new Date().toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'short',
+        });
+        entries.unshift({ sentence, origin: origin || '', dateLabel });
+        if (entries.length > HISTORY_LIMIT) entries.length = HISTORY_LIMIT;
+        saveHistory(entries);
+        updateSpinAvailability()
+      }
+
+      function renderHistory() {
+        const entries = loadHistory();
+        historyList.innerHTML = '';
+
+        if (!entries.length) {
+          const empty = document.createElement('p');
+          empty.className = 'history-empty';
+          empty.textContent = 'No history has been recorded yet.';
+          historyList.appendChild(empty);
+          return;
+        }
+
+        entries.forEach((entry) => {
+          const row = document.createElement('div');
+          row.className = 'history-entry';
+
+          const top = document.createElement('div');
+          top.className = 'history-entry-top';
+
+          const text = document.createElement('span');
+          text.className = 'history-entry-text';
+          text.textContent = entry.sentence;
+
+          const meta = document.createElement('div');
+          meta.className = 'history-entry-meta';
+
+          const spoilerButton = document.createElement('button');
+          spoilerButton.type = 'button';
+          spoilerButton.className = 'spoiler-button';
+          spoilerButton.textContent = 'Spoiler';
+          spoilerButton.setAttribute('aria-expanded', 'false');
+
+          const date = document.createElement('span');
+          date.className = 'history-entry-date';
+          date.textContent = entry.dateLabel;
+
+          meta.appendChild(spoilerButton);
+          meta.appendChild(date);
+          top.appendChild(text);
+          top.appendChild(meta);
+
+          const origin = document.createElement('div');
+          origin.className = 'history-entry-origin';
+          origin.textContent = entry.origin || 'No origin added yet.';
+
+          spoilerButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const isVisible = origin.classList.toggle('visible');
+            spoilerButton.setAttribute('aria-expanded', String(isVisible));
+            if (isVisible) {
+              playSound('showspoiler');
+            } else {
+              playReversedSound('showspoiler');
+            }
+          });
+
+          row.appendChild(top);
+          row.appendChild(origin);
+          historyList.appendChild(row);
+        });
+      }
+
+      function openHistory() {
+        if (isSpinning || isWinnerShown || isHistoryShown) return;
+        renderHistory();
+        if (clearHistoryButton) {
+          clearHistoryButton.disabled = loadHistory().length === 0;
+          clearHistoryButton.onclick = (event) => {
+            event.stopPropagation();
+            if (clearHistoryButton.disabled) return;
+            if (!confirm('Only perform this action if you are unhappy with the results.')) return;
+            playSound('deletehistory');
+            saveHistory([]);
+            renderHistory();
+            updateSpinAvailability();
+          };
+        }
+
+        historyOverlay.classList.add('visible');
+        isHistoryShown = true;
+        setControlsLocked(true);
+        animateHistoryFrames([0, 1, 2], () => {
+          setHistoryFrame(2);
+        });
+      }
+
+      function closeHistory() {
+        if (!isHistoryShown) return;
+        historyOverlay.classList.remove('visible');
+        isHistoryShown = false;
+        setControlsLocked(false);
+        animateHistoryFrames([2, 1, 0], () => {
+          setHistoryFrame(0);
+        });
+      }
+
+      function setTrackPosition(pos) {
+        sentenceTrack.style.transform = `translateY(${-pos}px)`;
+      }
+
+      function getHalfScroll() {
+        return sentenceTrack.scrollHeight / 2;
+      }
+
+      function renderCategories() {
+        categoryList.innerHTML = '';
+
+        Object.keys(categories).forEach((categoryKey) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'category-button';
+          if (categoryKey === selectedCategory) {
+            button.classList.add('active');
+          }
+          button.disabled = isSpinning || isWinnerShown || isHistoryShown;
+          button.textContent = categoryKey;
+          button.addEventListener('click', () => {
+            if (isSpinning || isWinnerShown || isHistoryShown) return;
+            playSound('clickbutton');
+            selectedCategory = categoryKey;
+            renderCategories();
+            renderSentences();
+          });
+          categoryList.appendChild(button);
+        });
+
+      function fitCategoryList() {
+        const categoryList = document.getElementById('categoryList');
+        const buttons = categoryList.querySelectorAll('.category-button');
+        if (!buttons.length) return;
+        
+        categoryList.style.flex = '1 1 0%';
+        categoryList.style.height = '';
+
+        const availableHeight = categoryList.clientHeight;
+        const gap = parseFloat(getComputedStyle(categoryList).rowGap) || 0;
+        const itemHeight = buttons[0].getBoundingClientRect().height + gap;
+        if (itemHeight <= 0) return;
+
+        const fullItemsThatFit = Math.max(1, Math.floor((availableHeight + gap) / itemHeight));
+        const snappedHeight = fullItemsThatFit * itemHeight - gap;
+
+        categoryList.style.flex = `0 0 ${snappedHeight}px`;
+      }
+
+      window.addEventListener('load', fitCategoryList);
+      window.addEventListener('resize', fitCategoryList);
+
+      }
+      function renderSentences() {
+        displayedItems = shuffleItems(getCategoryItems(selectedCategory));
+        const items = displayedItems;
+        const repeatedItems = [...items, ...items];
+        sentenceTrack.innerHTML = '';
+
+        repeatedItems.forEach((sentence) => {
+          const card = document.createElement('div');
+          card.className = 'sentence-item';
+          card.textContent = getSentenceText(sentence);
+          sentenceTrack.appendChild(card);
+        });
+
+        const halfScroll = getHalfScroll();
+        if (halfScroll > 0) {
+          scrollOffset = ((scrollOffset % halfScroll) + halfScroll) % halfScroll;
+          setTrackPosition(scrollOffset);
+        }
+      }
+
+      function getCenteredScrollFor(card) {
+        const containerHeight = sentenceList.clientHeight;
+        const raw = card.offsetTop + card.offsetHeight / 2 - containerHeight / 2;
+        const halfScroll = getHalfScroll();
+        return ((raw % halfScroll) + halfScroll) % halfScroll;
+      }
+
+      function spinWheel() {
+        if (isSpinning || isWinnerShown || isHistoryShown) return;
+
+        const options = displayedItems;
+        const cards = sentenceTrack.querySelectorAll('.sentence-item');
+        const halfScroll = getHalfScroll();
+
+        if (!options.length || !cards.length || halfScroll <= 0) return;
+
+        isSpinning = true;
+        playSound(loadHistory().length >= 2 ? 'clickspinfinal' : 'clickspinnormal');
+        setControlsLocked(true);
+
+        const winnerIndex = Math.floor(Math.random() * options.length);
+        const targetCard = cards[winnerIndex];
+        const targetPos = getCenteredScrollFor(targetCard);
+        const startPos = ((scrollOffset % halfScroll) + halfScroll) % halfScroll;
+
+    
+        let forwardDistance = targetPos - startPos;
+        if (forwardDistance <= 0) forwardDistance += halfScroll;
+        const totalDistance = forwardDistance + SPIN_LOOPS * halfScroll;
+
+        const startTime = performance.now();
+
+        function animateSpin(currentTime) {
+          const elapsed = currentTime - startTime;
+          const progress = Math.min(elapsed / SPIN_DURATION, 1);
+          const eased = 1 - Math.pow(1 - progress, 4);
+          const currentPos = (startPos + totalDistance * eased) % halfScroll;
+          setTrackPosition(currentPos);
+
+          if (progress < 1) {
+            requestAnimationFrame(animateSpin);
+          } else {
+            setTrackPosition(targetPos);
+            scrollOffset = targetPos;
+            winnerText.textContent = getSentenceText(options[winnerIndex]);
+            addHistoryEntry(getSentenceText(options[winnerIndex]), getSentenceOrigin(options[winnerIndex]));
+            playSound('resultreceived');
+            winnerOverlay.classList.add('visible');
+            isSpinning = false;
+            isWinnerShown = true;
+            spinButton.disabled = true;
+          }
+        }
+
+        requestAnimationFrame(animateSpin);
+      }
+
+      function closeWinnerCard() {
+        if (!isWinnerShown) return;
+        winnerOverlay.classList.remove('visible');
+        isWinnerShown = false;
+        setControlsLocked(false);
+      }
+
+      let lastFrameTime = null;
+
+      function animateSlowScroll(currentTime) {
+  
+        if (lastFrameTime === null) lastFrameTime = currentTime;
+        const deltaMs = Math.min(currentTime - lastFrameTime, 250);
+        lastFrameTime = currentTime;
+
+        if (!isSpinning) {
+          const halfScroll = getHalfScroll();
+          if (halfScroll > 0) {
+            scrollOffset += slowScrollSpeed * (deltaMs / (1000 / 60));
+            scrollOffset = ((scrollOffset % halfScroll) + halfScroll) % halfScroll;
+            setTrackPosition(scrollOffset);
+          }
+        }
+
+        requestAnimationFrame(animateSlowScroll);
+      }
+
+      spinButton.addEventListener('click', spinWheel);
+      winnerOverlay.addEventListener('click', closeWinnerCard);
+      historyButton.addEventListener('click', () => {
+        playSound('clickbutton');
+        openHistory();
+      });
+      historyButton.addEventListener('mouseenter', () => {
+        if (isSpinning || isWinnerShown || isHistoryShown) return;
+        animateHistoryFrames([0, 1, 2], () => {
+          setHistoryFrame(2);
+        });
+      });
+      historyButton.addEventListener('mouseleave', () => {
+        if (isHistoryShown) return;
+        animateHistoryFrames([2, 1, 0], () => {
+          setHistoryFrame(0);
+        });
+      });
+      historyButton.addEventListener('pointerdown', () => {
+        if (isSpinning || isWinnerShown || isHistoryShown) return;
+        historyButton.classList.add('pressed');
+        setHistoryFrame(2);
+      });
+      historyButton.addEventListener('pointerup', () => {
+        historyButton.classList.remove('pressed');
+        if (!isHistoryShown && !historyButton.matches(':hover')) {
+          setHistoryFrame(0);
+        }
+      });
+      historyButton.addEventListener('pointerleave', () => {
+        historyButton.classList.remove('pressed');
+        if (!isHistoryShown && !historyButton.matches(':hover')) {
+          setHistoryFrame(0);
+        }
+      });
+      historyButton.addEventListener('pointercancel', () => {
+        historyButton.classList.remove('pressed');
+        if (!isHistoryShown && !historyButton.matches(':hover')) {
+          setHistoryFrame(0);
+        }
+      });
+   
+      historyOverlay.addEventListener('click', (e) => {
+        if (e.target === historyOverlay) closeHistory();
+      });
+
+     
+      renderCategories();
+      renderSentences();
+      updateSpinAvailability();
+      requestAnimationFrame(animateSlowScroll);
+
+
+      const afkOverlay = document.getElementById('afkOverlay');
+      const afkText = document.getElementById('afkText');
+      const AFK_TIMEOUT_NORMAL = 34 * 1000;   
+      const AFK_TIMEOUT_HISTORY_OPEN = 4.7 * 60 * 1000;
+      const AFK_MESSAGES = [
+        "Maxwell is going to miss you!",
+        "Charlie is going to miss you!",
+      ];
+      let afkTimer = null;
+
+      function scheduleAfkWarning() {
+    clearTimeout(afkTimer);
+    afkOverlay.classList.remove('visible');
+
+      const timeout = isHistoryShown ? AFK_TIMEOUT_HISTORY_OPEN : AFK_TIMEOUT_NORMAL;
+
+      afkTimer = setTimeout(() => {
+        
+        if (isHistoryShown) return;
+        afkText.textContent = AFK_MESSAGES[Math.floor(Math.random() * AFK_MESSAGES.length)];
+        playSound('missyouidle');
+        afkOverlay.classList.add('visible');
+      }, timeout);
+    }
+
+      document.addEventListener('click', scheduleAfkWarning);
+      scheduleAfkWarning();
+    </script>
+  </body>
+</html>

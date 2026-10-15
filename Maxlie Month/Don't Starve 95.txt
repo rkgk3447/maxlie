@@ -1,0 +1,18 @@
+Don't Starve	95
+Don't Starve together	183
+Ancient Fuelweaver	153
+World Generation Sentence Fragments	31
+Skin Descriptions	176
+Adventure Mode	47
+Hallowed Valentine	35
+Stage play	27
+Loading Screen Texts	32
+Item Descriptions	48
+Speech Files	13
+Shadow Mual	18
+Animated Shorts	28
+William Carter Puzzles	15
+
+
+Total	901
+Maxwell Total  278
