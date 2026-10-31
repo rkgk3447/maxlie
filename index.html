@@ -2076,6 +2076,7 @@
         missyouidle: { src: 'Maxblonda/missyouidle.ogg', volume: 0.5 },
         selectweek: { src: 'Maxblonda/selectweek.ogg', volume: 0.5 },
         showspoiler: { src: 'Maxblonda/showspoiler.ogg', volume: 0.5 },
+        dreadstone: { src: 'Maxblonda/dreadstone.ogg', volume: 0.6 },
       };
       const activeAudioTimers = new Map();
       const activeAudioHandles = new Map();
@@ -2759,6 +2760,7 @@
               button.classList.remove('shake');
               void button.offsetWidth;
               button.classList.add('shake');
+              playSound('dreadstone');
               return;
             }
 
