@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sentence Wheel</title>
+    <title>MAXLIE WEEK</title>
     <style>
       @font-face {
         font-family: "Paper Cut Caps";
@@ -17,7 +17,6 @@
         --panel: #171a1e;
         --panel-alt: #101317;
         --carpet-pattern: url('MISC%20ASSETS/carpet.png');
-        /* Colours sampled straight from MISC ASSETS/carpet.png's threads (pink -> purple -> violet on dark plum) */
         --carpet-plum: #1e081f;
         --carpet-pink: 150, 29, 100;
         --carpet-purple: 134, 29, 148;
@@ -252,7 +251,6 @@
         cursor: not-allowed;
       }
 
-      /* ACT that has not been released yet */
       .category-button.is-locked,
       .category-button.is-locked:hover,
       .category-button.is-locked:active {
@@ -728,14 +726,12 @@
         -ms-user-select: none;
       }
 
-      /* ---------- ACT sections inside History ---------- */
       .history-act {
         display: flex;
         flex-direction: column;
         gap: 12px;
       }
 
-      /* the separator line between ACT I / ACT II / ACT III */
       .history-act + .history-act {
         margin-top: 10px;
         padding-top: 22px;
@@ -823,7 +819,6 @@
         transform: translateY(1px);
       }
 
-      /* ---------- warning dialog ---------- */
       .confirm-overlay {
         z-index: 300;
         background: rgba(0, 0, 0, 0.72);
@@ -922,7 +917,6 @@
         outline-offset: 2px;
       }
 
-      /* ---------- shown instead of sentences while the selected ACT is unreleased ---------- */
       .act-locked-note {
         position: absolute;
         inset: 0;
@@ -1008,9 +1002,7 @@
     </div>
 
     <script>
-      // ================================================================
-      // SENTENCES: one list per ACT
-      // ================================================================
+   
       const categories = {
         "ACT I": [
           { text: "Charlie? It's me! Maxwell!", origin: "Maxwell announcing darkness approach, DS" },
@@ -1986,30 +1978,16 @@
         ],
       };
 
-      // ================================================================
-      // RELEASE SCHEDULE
-      // ----------------------------------------------------------------
-      // Months are 0-indexed in JavaScript, so 10 = November.
-      // An ACT opens at 00:00 on its date, in the VIEWER'S OWN timezone.
-      // There is deliberately NO closing date: once an ACT has opened it
-      // stays open, so people can always go back to it.
-      //
-      //   ACT I    opens Sun Nov 1    (its week: Nov 1 - Nov 7)
-      //   ACT II   opens Sun Nov 8    (its week: Nov 8 - Nov 14)
-      //   ...buffer week: Nov 15 - Nov 21...
-      //   ACT III  opens Sun Nov 22   (its week: Nov 22 - Nov 28)
-      // ================================================================
+    
       const ACT_SCHEDULE = {
         'ACT I':   { opens: new Date(2026, 10, 1) },
         'ACT II':  { opens: new Date(2026, 10, 8) },
         'ACT III': { opens: new Date(2026, 10, 22) },
       };
 
-      // ---- TESTING SWITCHES ------------------------------------------
-      // TODO before launch: set TEST_MODE_ACT_I_ALWAYS_OPEN to false.
+
       const TEST_MODE_ACT_I_ALWAYS_OPEN = true;
-      // To pretend it is a different moment (e.g. to try ACT II / ACT III),
-      // set this to a Date such as new Date(2026, 10, 9, 12, 0). Keep it null for real use.
+
       const DEBUG_NOW = null;
 
       function getNow() {
@@ -2041,7 +2019,6 @@
       }
 
       function getCategoryItems(categoryKey) {
-        // Never expose the sentences of an ACT that has not opened yet.
         if (!isActUnlocked(categoryKey)) return [];
         const items = categories[categoryKey];
         if (!Array.isArray(items)) return [];
@@ -2085,8 +2062,7 @@
       let slowScrollSpeed = 0.35;
       const SPIN_DURATION = 6500;
       const SPIN_LOOPS = 4;
-      // Keys are namespaced: on GitHub Pages every project under username.github.io
-      // shares one localStorage, so generic names could collide with other projects.
+   
       const HISTORY_KEY = 'maxlieMonth.history.v2';
       const LOCKS_KEY = 'maxlieMonth.locks.v2';
       const HISTORY_LIMIT = 200;
@@ -2276,7 +2252,6 @@
           };
           source.start();
         } catch (error) {
-          // The reveal sound remains available if reversed playback is unsupported.
         }
       }
 
@@ -2432,7 +2407,7 @@
         });
       }
 
-      // ---------------- history storage ----------------
+   
       function loadHistory() {
         try {
           const raw = localStorage.getItem(HISTORY_KEY);
@@ -2452,7 +2427,7 @@
         }
       }
 
-      // Which ACTs have been locked in: { "ACT I": true, ... }
+
       function loadLocks() {
         try {
           const raw = localStorage.getItem(LOCKS_KEY);
@@ -2483,7 +2458,7 @@
         return getActEntries(act).length >= SPIN_HISTORY_LIMIT;
       }
 
-      // Everything the person may still clear (i.e. not in a locked ACT).
+    
       function getClearableEntries() {
         return loadHistory().filter((entry) => !isActLocked(entry.act));
       }
@@ -2500,7 +2475,7 @@
         updateSpinAvailability();
       }
 
-      // ---------------- themed warning dialog ----------------
+     
       const confirmOverlay = document.getElementById('confirmOverlay');
       const confirmEyebrow = document.getElementById('confirmEyebrow');
       const confirmTitle = document.getElementById('confirmTitle');
@@ -2541,12 +2516,12 @@
           confirmCancelButton.addEventListener('click', onCancel);
           confirmOverlay.addEventListener('click', onBackdrop);
           document.addEventListener('keydown', onKey, true);
-          // The safe choice is focused by default.
+      
           confirmCancelButton.focus();
         });
       }
 
-      // ---------------- history rendering ----------------
+
       const LOCK_ICON_SVG = '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="1.5"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>';
 
       function buildHistoryRow(entry) {
@@ -2630,7 +2605,7 @@
           return;
         }
 
-        // One section per ACT, always in order ACT I -> II -> III, each separated by a line.
+
         Object.keys(categories).forEach((act) => {
           const actEntries = entries.filter((entry) => entry.act === act);
           if (!actEntries.length) return;
@@ -2657,7 +2632,6 @@
 
           actEntries.forEach((entry) => section.appendChild(buildHistoryRow(entry)));
 
-          // All 3 prompts chosen and not locked yet -> offer the lock at the end of this ACT.
           if (actEntries.length >= SPIN_HISTORY_LIMIT && !locked) {
             const lockRow = document.createElement('div');
             lockRow.className = 'history-lock-row';
@@ -2714,7 +2688,7 @@
             if (!confirmed) return;
 
             playSound('deletehistory');
-            // Locked ACTs are never touched.
+         
             saveHistory(loadHistory().filter((entry) => isActLocked(entry.act)));
             renderHistory();
             updateSpinAvailability();
@@ -2781,7 +2755,6 @@
           button.addEventListener('click', () => {
             if (isSpinning || isWinnerShown || isHistoryShown) return;
 
-            // Not released yet: wiggle, but do not select.
             if (!isActUnlocked(categoryKey)) {
               button.classList.remove('shake');
               void button.offsetWidth;
@@ -2972,7 +2945,7 @@
       updateSpinAvailability();
       requestAnimationFrame(animateSlowScroll);
 
-      // Pick up a newly released ACT without needing a page refresh.
+    
       let lastOpenActs = Object.keys(categories).filter(isActUnlocked).join('|');
       window.setInterval(() => {
         if (isSpinning || isWinnerShown || isHistoryShown) return;
