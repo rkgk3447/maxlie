@@ -241,6 +241,10 @@
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -1px 0 rgba(0, 0, 0, 0.3), 0 0 18px rgba(var(--carpet-crimson), 0.35);
       }
 
+      .category-button:not(.active):not(.is-locked) {
+        color: rgba(180, 184, 192, 0.68);
+      }
+
       .category-button.active:active,
       .category-button.active.pressed {
         filter: brightness(0.72) saturate(0.8);
@@ -2057,6 +2061,7 @@
       let isSpinning = false;
       let isWinnerShown = false;
       let isHistoryShown = false;
+      let isChoosingHistoryReset = false;
       let scrollOffset = 0;
       let displayedItems = [];
       let slowScrollSpeed = 0.35;
@@ -2067,6 +2072,7 @@
       const LOCKS_KEY = 'maxlieMonth.locks.v2';
       const HISTORY_LIMIT = 200;
       const SPIN_HISTORY_LIMIT = 3;
+      const MINIMUM_LOCK_RESULTS = 2;
       const AUDIO_CONFIG = {
         clickspinnormal: { src: 'Maxblonda/clickspinnormal.ogg', volume: 0.6 },
         clickspinfinal: { src: 'Maxblonda/clickspinfinal.ogg', volume: 0.6 },
@@ -2272,9 +2278,7 @@
         spinButton.title = '';
       }
 
-      if (clearHistoryButton) {
-        clearHistoryButton.disabled = getClearableEntries().length === 0;
-      }
+      updateClearHistoryButton();
 
       updateGhostVisibility();
     }
@@ -2460,8 +2464,14 @@
       }
 
     
-      function getClearableEntries() {
-        return loadHistory().filter((entry) => !isActLocked(entry.act));
+      function getClearableActs() {
+        return Object.keys(categories).filter((act) => !isActLocked(act) && getActEntries(act).length > 0);
+      }
+
+      function updateClearHistoryButton() {
+        if (!clearHistoryButton) return;
+        clearHistoryButton.disabled = !isChoosingHistoryReset && getClearableActs().length === 0;
+        clearHistoryButton.textContent = isChoosingHistoryReset ? 'Cancel reset' : 'Clear History';
       }
 
       function addHistoryEntry(sentence, origin, act) {
@@ -2575,17 +2585,21 @@
       }
 
       async function lockAct(act) {
+        const resultCount = getActEntries(act).length;
+        if (resultCount < MINIMUM_LOCK_RESULTS || isActLocked(act)) return;
+
         const confirmed = await showConfirm({
           eyebrow: 'Warning',
           title: `Lock in ${act}?`,
           message:
-            `This is permanent.\n\nOnce ${act} is locked, you can no longer clear or change its ${SPIN_HISTORY_LIMIT} results, ` +
+            `This is permanent.\n\n${resultCount < SPIN_HISTORY_LIMIT ? `You have only selected ${resultCount} instead of ${SPIN_HISTORY_LIMIT} results. ` : ''}` +
+            `Once ${act} is locked, you can no longer clear or change its ${resultCount} results, ` +
             'even if you change your mind later. Only continue if you are happy with them.',
           confirmLabel: `Lock in ${act}`,
           cancelLabel: 'Go back',
         });
         if (!confirmed) return;
-        if (getActEntries(act).length < SPIN_HISTORY_LIMIT) return;
+        if (getActEntries(act).length < MINIMUM_LOCK_RESULTS || isActLocked(act)) return;
         const locks = loadLocks();
         locks[act] = true;
         saveLocks(locks);
@@ -2597,6 +2611,59 @@
       function renderHistory() {
         const entries = loadHistory();
         historyList.innerHTML = '';
+
+        if (isChoosingHistoryReset) {
+          const clearableActs = getClearableActs();
+          const instruction = document.createElement('p');
+          instruction.className = 'history-empty';
+          instruction.textContent = `Choose one of ${clearableActs.length} available acts to reset.`;
+          historyList.appendChild(instruction);
+
+          clearableActs.forEach((act) => {
+            const resultCount = getActEntries(act).length;
+            const section = document.createElement('section');
+            section.className = 'history-act';
+
+            const resetButton = document.createElement('button');
+            resetButton.type = 'button';
+            resetButton.className = 'lock-history-button';
+            resetButton.textContent = `Reset ${act} (${resultCount} ${resultCount === 1 ? 'result' : 'results'})`;
+            resetButton.addEventListener('click', async (event) => {
+              event.stopPropagation();
+              if (isActLocked(act) || getActEntries(act).length === 0) {
+                isChoosingHistoryReset = false;
+                renderHistory();
+                updateClearHistoryButton();
+                return;
+              }
+
+              const confirmed = await showConfirm({
+                eyebrow: 'Warning',
+                title: `Reset ${act}?`,
+                message: `This will permanently remove ${getActEntries(act).length} saved result${getActEntries(act).length === 1 ? '' : 's'} for ${act}. This cannot be undone.`,
+                confirmLabel: `Reset ${act}`,
+                cancelLabel: 'Keep results',
+                danger: true,
+              });
+              if (!confirmed) return;
+              if (isActLocked(act) || getActEntries(act).length === 0) {
+                renderHistory();
+                updateClearHistoryButton();
+                return;
+              }
+
+              playSound('deletehistory');
+              saveHistory(loadHistory().filter((entry) => entry.act !== act));
+              isChoosingHistoryReset = false;
+              renderHistory();
+              updateSpinAvailability();
+            });
+
+            section.appendChild(resetButton);
+            historyList.appendChild(section);
+          });
+          return;
+        }
 
         if (!entries.length) {
           const empty = document.createElement('p');
@@ -2633,13 +2700,15 @@
 
           actEntries.forEach((entry) => section.appendChild(buildHistoryRow(entry)));
 
-          if (actEntries.length >= SPIN_HISTORY_LIMIT && !locked) {
+          if (actEntries.length >= MINIMUM_LOCK_RESULTS && !locked) {
             const lockRow = document.createElement('div');
             lockRow.className = 'history-lock-row';
 
             const note = document.createElement('span');
             note.className = 'history-lock-note';
-            note.textContent = 'Happy with these? Locking is permanent.';
+            note.textContent = actEntries.length < SPIN_HISTORY_LIMIT
+              ? `You have only selected ${actEntries.length} instead of ${SPIN_HISTORY_LIMIT}. Locking is permanent.`
+              : 'Happy with these? Locking is permanent.';
 
             const lockButton = document.createElement('button');
             lockButton.type = 'button';
@@ -2663,36 +2732,14 @@
         if (isSpinning || isWinnerShown || isHistoryShown) return;
         renderHistory();
         if (clearHistoryButton) {
-          clearHistoryButton.disabled = getClearableEntries().length === 0;
+          isChoosingHistoryReset = false;
+          updateClearHistoryButton();
           clearHistoryButton.onclick = async (event) => {
             event.stopPropagation();
             if (clearHistoryButton.disabled) return;
-
-            const actNames = Object.keys(categories);
-            const clearableActs = actNames.filter((act) => !isActLocked(act) && getActEntries(act).length > 0);
-            const lockedActs = actNames.filter((act) => isActLocked(act) && getActEntries(act).length > 0);
-
-            let message = 'Only perform this action if you are unhappy with the results.';
-            message += `\n\nThis will clear: ${clearableActs.join(', ')}.`;
-            if (lockedActs.length) {
-              message += `\n${lockedActs.join(', ')} ${lockedActs.length > 1 ? 'are' : 'is'} locked and will be kept.`;
-            }
-
-            const confirmed = await showConfirm({
-              eyebrow: 'Warning',
-              title: 'Clear history?',
-              message,
-              confirmLabel: 'Clear history',
-              cancelLabel: 'Keep it',
-              danger: true,
-            });
-            if (!confirmed) return;
-
-            playSound('deletehistory');
-         
-            saveHistory(loadHistory().filter((entry) => isActLocked(entry.act)));
+            isChoosingHistoryReset = !isChoosingHistoryReset;
             renderHistory();
-            updateSpinAvailability();
+            updateClearHistoryButton();
           };
         }
 
@@ -2708,6 +2755,8 @@
         if (!isHistoryShown) return;
         historyOverlay.classList.remove('visible');
         isHistoryShown = false;
+        isChoosingHistoryReset = false;
+        updateClearHistoryButton();
         setControlsLocked(false);
         animateHistoryFrames([2, 1, 0], () => {
           setHistoryFrame(0);
